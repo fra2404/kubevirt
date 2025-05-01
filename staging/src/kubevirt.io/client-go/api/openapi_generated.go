@@ -21789,6 +21789,13 @@ func schema_kubevirtio_api_core_v1_KubeVirtSpec(ref common.ReferenceCallback) co
 							Format:      "",
 						},
 					},
+					"synchronizationPort": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Specify the port to listen on for VMI status synchronization traffic. Default is 9185",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 					"configuration": {
 						SchemaProps: spec.SchemaProps{
 							Description: "holds kubevirt configurations. same as the virt-configMap",
@@ -22080,6 +22087,12 @@ func schema_kubevirtio_api_core_v1_LogVerbosity(ref common.ReferenceCallback) co
 						},
 					},
 					"virtOperator": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"integer"},
+							Format: "int32",
+						},
+					},
+					"virtSynchronizationController": {
 						SchemaProps: spec.SchemaProps{
 							Type:   []string{"integer"},
 							Format: "int32",
