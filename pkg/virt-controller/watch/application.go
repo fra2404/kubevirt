@@ -31,6 +31,7 @@ import (
 	v1 "kubevirt.io/api/core/v1"
 
 	"kubevirt.io/kubevirt/pkg/hooks"
+	"kubevirt.io/kubevirt/pkg/vnc"
 
 	containerdisk "kubevirt.io/kubevirt/pkg/container-disk"
 	kvtls "kubevirt.io/kubevirt/pkg/util/tls"
@@ -265,6 +266,9 @@ type VirtControllerApp struct {
 	leaderElector            *leaderelection.LeaderElector
 
 	onOpenshift bool
+
+	vncServiceController *vnc.ServiceController
+	vncControllerThreads int
 }
 
 var _ service.Service = &VirtControllerApp{}
@@ -468,6 +472,7 @@ func Execute() {
 	app.initExportController()
 	app.initWorkloadUpdaterController()
 	app.initCloneController()
+	app.initVNCController()
 	go app.Run()
 
 	<-app.reInitChan
@@ -505,6 +510,15 @@ func (vca *VirtControllerApp) shouldChangeLogVerbosity() {
 	} else {
 		log.Log.V(2).Infof("set log verbosity to %d", verbosity)
 	}
+}
+
+func (vca *VirtControllerApp) initVNCController() {
+
+	vca.vncServiceController = vnc.NewVNCServiceController(
+		vca.clientSet,
+		vca.vmiInformer,
+		vca.informerFactory.K8SInformerFactory().Core().V1().Services().Informer(),
+	)
 }
 
 func (vca *VirtControllerApp) Run() {
@@ -578,6 +592,7 @@ func (vca *VirtControllerApp) onStartedLeading() func(ctx context.Context) {
 		go vca.poolController.Run(vca.poolControllerThreads, stop)
 		go vca.vmController.Run(vca.vmControllerThreads, stop)
 		go vca.migrationController.Run(vca.migrationControllerThreads, stop)
+		go vca.vncServiceController.Run(stop)
 		go func() {
 			if err := vca.snapshotController.Run(vca.snapshotControllerThreads, stop); err != nil {
 				log.Log.Warningf("error running the snapshot controller: %v", err)

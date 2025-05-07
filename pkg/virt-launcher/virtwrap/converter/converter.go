@@ -1836,13 +1836,39 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 
 	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
 		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
-		domain.Spec.Devices.Graphics = []api.Graphics{
+
+		graphics := api.Graphics{
+			Type: "vnc",
+			Listen: &api.GraphicsListen{
+				Type:    "address",
+				Address: "0.0.0.0",
+			},
+		}
+
+		// Use port from DirectVNCAccess if specified, otherwise use default
+		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Port > 0 {
+			graphics.Port = vmi.Spec.DirectVNCAccess.Port
+		} else {
+			graphics.Port = 5900
+		}
+
+		// Set password if provided
+		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Password != "" {
+			graphics.Passwd = vmi.Spec.DirectVNCAccess.Password
+		}
+
+		domain.Spec.Devices.Graphics = []api.Graphics{graphics}
+	}
+
+	// Add virtio interfaces
+	if vmi.Annotations["kubevirt.io/graphics"] == "virtio" {
+		heads := uint(1)
+		domain.Spec.Devices.Video = []api.Video{
 			{
-				Listen: &api.GraphicsListen{
-					Type:   "socket",
-					Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
+				Model: api.VideoModel{
+					Type:  "virtio",
+					Heads: &heads,
 				},
-				Type: "vnc",
 			},
 		}
 	}

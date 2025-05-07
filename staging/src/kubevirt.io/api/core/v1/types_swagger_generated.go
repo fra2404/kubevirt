@@ -39,6 +39,15 @@ func (VirtualMachineInstanceSpec) SwaggerDoc() map[string]string {
 		"dnsConfig":                     "Specifies the DNS parameters of a pod.\nParameters specified here will be merged to the generated DNS\nconfiguration based on DNSPolicy.\n+optional",
 		"accessCredentials":             "Specifies a set of public keys to inject into the vm guest\n+listType=atomic\n+optional\n+kubebuilder:validation:MaxItems:=256",
 		"architecture":                  "Specifies the architecture of the vm guest you are attempting to run. Defaults to the compiled architecture of the KubeVirt components",
+		"directVNCAccess":               "DirectVNCAccess allows configuration of direct VNC connectivity to the VM\n+optional",
+	}
+}
+
+func (DirectVNCAccessOptions) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"":         "DirectVNCAccessOptions defines options for direct VNC connectivity to the VM",
+		"port":     "Port specifies the port for VNC connections (default: 5900)\n+optional",
+		"password": "Password for VNC authentication\n+optional",
 	}
 }
 
