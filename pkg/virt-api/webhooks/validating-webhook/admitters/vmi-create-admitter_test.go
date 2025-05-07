@@ -1506,6 +1506,183 @@ var _ = Describe("Validating VMICreate Admitter", func() {
 		})
 	})
 
+	Context("with DirectVNCAccess", func() {
+		DescribeTable("should accept DirectVNCAccess with compatible network interfaces",
+			func(interfaces []v1.Interface, networks []v1.Network, shouldAccept bool) {
+				vmi := api.NewMinimalVMI("testvmi")
+				vmi.Spec.Domain.Devices.Interfaces = interfaces
+				vmi.Spec.Networks = networks
+				vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+					Port: 6900,
+				}
+	
+				causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+				
+				if shouldAccept {
+					Expect(causes).To(BeEmpty())
+				} else {
+					Expect(causes).To(HaveLen(1))
+					Expect(causes[0].Field).To(Equal("fake.directVNCAccess"))
+					Expect(causes[0].Message).To(ContainSubstring("DirectVNCAccess is not supported with"))
+				}
+			},
+			Entry("with masquerade interface - should accept",
+				[]v1.Interface{{
+					Name: "default",
+					InterfaceBindingMethod: v1.InterfaceBindingMethod{
+						Masquerade: &v1.InterfaceMasquerade{},
+					},
+				}},
+				[]v1.Network{*v1.DefaultPodNetwork()},
+				true,
+			),
+			Entry("with bridge interface - should reject",
+				[]v1.Interface{{
+					Name: "default",
+					InterfaceBindingMethod: v1.InterfaceBindingMethod{
+						Bridge: &v1.InterfaceBridge{},
+					},
+				}},
+				[]v1.Network{*v1.DefaultPodNetwork()},
+				false,
+			),
+			Entry("with sriov interface - should reject",
+				[]v1.Interface{{
+					Name: "default",
+					InterfaceBindingMethod: v1.InterfaceBindingMethod{
+						SRIOV: &v1.InterfaceSRIOV{},
+					},
+				}},
+				[]v1.Network{*v1.DefaultPodNetwork()},
+				false,
+			),
+			Entry("without interface type (defaults to masquerade) - should accept",
+				[]v1.Interface{{
+					Name: "default",
+					// Nessun InterfaceBindingMethod specificato = masquerade default
+				}},
+				[]v1.Network{*v1.DefaultPodNetwork()},
+				true,
+			),
+		)
+	
+		It("should accept VMI without DirectVNCAccess", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{{
+				Name: "default",
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{
+					Bridge: &v1.InterfaceBridge{},
+				},
+			}}
+			vmi.Spec.Networks = []v1.Network{*v1.DefaultPodNetwork()}
+			// Nessun DirectVNCAccess specificato
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(BeEmpty())
+		})
+	
+		It("should reject DirectVNCAccess with invalid port", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{{
+				Name: "default",
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{
+					Masquerade: &v1.InterfaceMasquerade{},
+				},
+			}}
+			vmi.Spec.Networks = []v1.Network{*v1.DefaultPodNetwork()}
+			vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+				Port: 100, // Porta troppo bassa
+			}
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(HaveLen(1))
+			Expect(causes[0].Field).To(Equal("fake.directVNCAccess.port"))
+			Expect(causes[0].Message).To(ContainSubstring("DirectVNCAccess port must be between 1024 and 65535"))
+		})
+	
+		It("should accept DirectVNCAccess with valid port", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{{
+				Name: "default",
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{
+					Masquerade: &v1.InterfaceMasquerade{},
+				},
+			}}
+			vmi.Spec.Networks = []v1.Network{*v1.DefaultPodNetwork()}
+			vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+				Port: 6900,
+			}
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(BeEmpty())
+		})
+	
+		It("should accept DirectVNCAccess without port (uses default)", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{{
+				Name: "default",
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{
+					Masquerade: &v1.InterfaceMasquerade{},
+				},
+			}}
+			vmi.Spec.Networks = []v1.Network{*v1.DefaultPodNetwork()}
+			vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+				// Nessuna porta specificata, usa default
+			}
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(BeEmpty())
+		})
+	
+		It("should accept DirectVNCAccess with password", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{{
+				Name: "default",
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{
+					Masquerade: &v1.InterfaceMasquerade{},
+				},
+			}}
+			vmi.Spec.Networks = []v1.Network{*v1.DefaultPodNetwork()}
+			vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+				Port:     6900,
+				Password: "mysecretpassword",
+			}
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(BeEmpty())
+		})
+	
+		It("should reject DirectVNCAccess with multiple incompatible interfaces", func() {
+			vmi := api.NewMinimalVMI("testvmi")
+			vmi.Spec.Domain.Devices.Interfaces = []v1.Interface{
+				{
+					Name: "default",
+					InterfaceBindingMethod: v1.InterfaceBindingMethod{
+						Masquerade: &v1.InterfaceMasquerade{},
+					},
+				},
+				{
+					Name: "bridge-net",
+					InterfaceBindingMethod: v1.InterfaceBindingMethod{
+						Bridge: &v1.InterfaceBridge{},
+					},
+				},
+			}
+			vmi.Spec.Networks = []v1.Network{
+				*v1.DefaultPodNetwork(),
+				{Name: "bridge-net"},
+			}
+			vmi.Spec.DirectVNCAccess = &v1.DirectVNCAccessOptions{
+				Port: 6900,
+			}
+	
+			causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+			Expect(causes).To(HaveLen(1))
+			Expect(causes[0].Field).To(Equal("fake.directVNCAccess"))
+			Expect(causes[0].Message).To(ContainSubstring("DirectVNCAccess is not supported with bridge network interface"))
+		})
+	})
+
 	Context("with cpu pinning", func() {
 		var vmi *v1.VirtualMachineInstance
 

@@ -1432,6 +1432,11 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 	precond.MustNotBeNil(domain)
 	precond.MustNotBeNil(c)
 
+	// Aggiungi questa validazione subito dopo le precondizioni
+	if err := validateDirectVNCAccessCompatibility(vmi); err != nil {
+		return fmt.Errorf("DirectVNCAccess validation failed: %v", err)
+	}
+
 	domain.Spec.Name = api.VMINamespaceKeyFunc(vmi)
 	domain.ObjectMeta.Name = vmi.ObjectMeta.Name
 	domain.ObjectMeta.Namespace = vmi.ObjectMeta.Namespace
@@ -1887,13 +1892,67 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 			}
 			domain.Spec.Devices.Video = []api.Video{video}
 		}
-		domain.Spec.Devices.Graphics = []api.Graphics{
-			{
-				Listen: &api.GraphicsListen{
-					Type:   "socket",
-					Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
+
+		if vmi.Spec.DirectVNCAccess != nil {
+			// DirectVNCAccess: use direct QEMU arguments for both VNC and WebSocket
+			initializeQEMUCmdAndQEMUArg(domain)
+
+			vncPort := 5900
+			websocketPort := 6900
+
+			if vmi.Spec.DirectVNCAccess.Port > 0 {
+				vncPort = int(vmi.Spec.DirectVNCAccess.Port)
+				websocketPort = vncPort + 1000
+			}
+
+			// Configure VNC with WebSocket through QEMU arguments
+			vncOption := fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort-5900, websocketPort)
+
+			// Add password ONLY if provided
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				vncOption += ",password=on"
+			}
+
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+				api.Arg{Value: "-vnc"},
+				api.Arg{Value: vncOption})
+
+			// Configure password ONLY if provided
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+					api.Arg{Value: "-object"},
+					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s", vmi.Spec.DirectVNCAccess.Password)})
+			}
+
+			// Also add standard VNC via QEMU cmd for compatibility
+			standardVNCSocket := fmt.Sprintf("unix:%s/virt-vnc", fmt.Sprintf("/var/run/kubevirt-private/%s", vmi.ObjectMeta.UID))
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+				api.Arg{Value: "-vnc"},
+				api.Arg{Value: standardVNCSocket})
+
+		} else {
+			// Original standard VNC configuration (when DirectVNCAccess is not enabled)
+			domain.Spec.Devices.Graphics = []api.Graphics{
+				{
+					Listen: &api.GraphicsListen{
+						Type:   "socket",
+						Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
+					},
+					Type: "vnc",
 				},
-				Type: "vnc",
+			}
+		}
+	}
+
+	// Add virtio interfaces
+	if vmi.Annotations["kubevirt.io/graphics"] == "virtio" {
+		heads := uint(1)
+		domain.Spec.Devices.Video = []api.Video{
+			{
+				Model: api.VideoModel{
+					Type:  "virtio",
+					Heads: &heads,
+				},
 			},
 		}
 	}
@@ -2123,4 +2182,28 @@ func domainVCPUTopologyForHotplug(vmi *v1.VirtualMachineInstance, domain *api.Do
 		Placement: "static",
 		CPUs:      cpuCount,
 	}
+}
+
+// Validation function for DirectVNCAccess
+func validateDirectVNCAccessCompatibility(vmi *v1.VirtualMachineInstance) error {
+	if vmi.Spec.DirectVNCAccess == nil {
+		return nil // If DirectVNCAccess is not present, no validation needed
+	}
+
+	for _, iface := range vmi.Spec.Domain.Devices.Interfaces {
+		// Bridge is not compatible
+		if iface.InterfaceBindingMethod.Bridge != nil {
+			return fmt.Errorf("DirectVNCAccess is not compatible with bridge network interface '%s'. Only masquerade interfaces are supported", iface.Name)
+		}
+
+		// SR-IOV is not compatible
+		if iface.InterfaceBindingMethod.SRIOV != nil {
+			return fmt.Errorf("DirectVNCAccess is not compatible with SR-IOV network interface '%s'. Only masquerade interfaces are supported", iface.Name)
+		}
+
+		// Masquerade is OK (both explicit and implicit)
+		// If no type is specified, masquerade is used by default
+	}
+
+	return nil
 }

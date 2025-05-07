@@ -373,6 +373,9 @@ spec:
             - namespacesValue
             topologyKey: topologyKeyValue
       architecture: architectureValue
+      directVNCAccess:
+        password: passwordValue
+        port: -4
       dnsConfig:
         nameservers:
         - nameserversValue

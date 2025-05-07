@@ -1,0 +1,26 @@
+apiVersion: kubevirt.io/v1
+kind: VirtualMachineInstance
+metadata:
+  name: vmi-vnc-test2
+spec:
+  domain:
+    devices:
+      disks:
+      - disk:
+          bus: virtio
+        name: containerdisk
+      interfaces:
+      - name: default
+        masquerade: {}
+    resources:
+      requests:
+        memory: 64M
+  networks:
+  - name: default
+    pod: {}
+  volumes:
+  - containerDisk:
+      image: quay.io/kubevirt/cirros-container-disk-demo
+    name: containerdisk
+  directVNCAccess:
+    port: 5900

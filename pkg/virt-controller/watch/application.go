@@ -31,6 +31,7 @@ import (
 	v1 "kubevirt.io/api/core/v1"
 
 	"kubevirt.io/kubevirt/pkg/hooks"
+	"kubevirt.io/kubevirt/pkg/vnc"
 
 	containerdisk "kubevirt.io/kubevirt/pkg/container-disk"
 	kvtls "kubevirt.io/kubevirt/pkg/util/tls"
@@ -266,6 +267,9 @@ type VirtControllerApp struct {
 	leaderElector            *leaderelection.LeaderElector
 
 	onOpenshift bool
+
+	vncServiceController *vnc.ServiceController
+	vncControllerThreads int
 }
 
 var _ service.Service = &VirtControllerApp{}
@@ -469,6 +473,7 @@ func Execute() {
 	app.initExportController()
 	app.initWorkloadUpdaterController()
 	app.initCloneController()
+	app.initVNCController()
 	go app.Run()
 
 	<-app.reInitChan
@@ -506,6 +511,15 @@ func (vca *VirtControllerApp) shouldChangeLogVerbosity() {
 	} else {
 		log.Log.V(2).Infof("set log verbosity to %d", verbosity)
 	}
+}
+
+func (vca *VirtControllerApp) initVNCController() {
+
+	vca.vncServiceController = vnc.NewVNCServiceController(
+		vca.clientSet,
+		vca.vmiInformer,
+		vca.informerFactory.K8SInformerFactory().Core().V1().Services().Informer(),
+	)
 }
 
 func (vca *VirtControllerApp) Run() {
@@ -579,6 +593,7 @@ func (vca *VirtControllerApp) onStartedLeading() func(ctx context.Context) {
 		go vca.poolController.Run(vca.poolControllerThreads, stop)
 		go vca.vmController.Run(vca.vmControllerThreads, stop)
 		go vca.migrationController.Run(vca.migrationControllerThreads, stop)
+		go vca.vncServiceController.Run(stop)
 		go func() {
 			if err := vca.snapshotController.Run(vca.snapshotControllerThreads, stop); err != nil {
 				log.Log.Warningf("error running the snapshot controller: %v", err)
@@ -648,6 +663,34 @@ func (vca *VirtControllerApp) initCommon() {
 		services.WithNetBindingPluginMemoryCalculator(netbinding.MemoryCalculator{}),
 		services.WithAnnotationsGenerators(netAnnotationsGenerator, storageannotations.Generator{}),
 		services.WithNetTargetAnnotationsGenerator(netAnnotationsGenerator),
+		// Aggiunta del VNC sidecar creator
+		/*  services.WithSidecarCreator(
+						func(vmi *v1.VirtualMachineInstance, _ *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
+							if vmi.Annotations["kubevirt.io/enable-vnc-proxy"] == "true" {
+								vncPort := int32(5900)  // Porta standard VNC
+
+								log.Log.Infof("Adding VNC proxy sidecar for VMI %s with port %d", vmi.Name, vncPort)
+								vncProxySidecar := hooks.HookSidecar{
+								Image:           "nicolaka/netshoot:latest",
+								ImagePullPolicy: k8sv1.PullIfNotPresent,
+								Name:            "vnc-proxy",
+								Command: []string{
+									"sh",
+									"-c",
+									fmt.Sprintf(
+										"echo 'Starting VNC proxy from %d to %d' && "+
+										"while true; do "+
+										"  socat -v TCP-LISTEN:%d,fork,reuseaddr TCP:127.0.0.1:%d || "+
+										"  echo 'Connection failed, retrying in 5 seconds...' && "+
+										"  sleep 5; "+
+										"done",
+										vncPort+1000, vncPort, vncPort+1000, vncPort),
+								},
+							}
+		                    return hooks.HookSidecarList{vncProxySidecar}, nil
+		                }
+		                return nil, nil
+		            }), */
 	)
 
 	topologyHinter := topology.NewTopologyHinter(vca.nodeInformer.GetStore(), vca.vmiInformer.GetStore(), vca.clusterConfig)

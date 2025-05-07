@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test WebSocket Base</title>
+</head>
+<body>
+    <h1>Test Connessione WebSocket</h1>
+    <button onclick="testConnection()">Test Connessione</button>
+    <pre id="output"></pre>
+
+    <script>
+        function log(message) {
+            document.getElementById('output').textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+        }
+        
+        function testConnection() {
+            log('Tentativo di connessione a ws://192.168.1.2:30000...');
+            
+            const ws = new WebSocket('ws://192.168.1.2:30000');
+            
+            // IMPORTANTE: Imposta il tipo di dati come binario
+            ws.binaryType = 'arraybuffer';
+            
+            ws.onopen = function(event) {
+                log('✅ WebSocket connesso!');
+                
+                // Invia handshake VNC come dati binari
+                const handshake = new TextEncoder().encode('RFB 003.008\n');
+                ws.send(handshake);
+                log('📤 Handshake VNC inviato (binario)');
+            };
+            
+            ws.onmessage = function(event) {
+                if (event.data instanceof ArrayBuffer) {
+                    const bytes = new Uint8Array(event.data);
+                    log('📦 Ricevuto: ' + bytes.length + ' bytes (binario)');
+                    
+                    // Converti i primi bytes in stringa per vedere la risposta
+                    const decoder = new TextDecoder();
+                    const text = decoder.decode(bytes.slice(0, Math.min(50, bytes.length)));
+                    log('📄 Contenuto: ' + text);
+                    
+                    console.log('Dati ricevuti (hex):', Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' '));
+                } else {
+                    log('📦 Ricevuto: ' + event.data.length + ' bytes (testo)');
+                    console.log('Dati ricevuti:', event.data);
+                }
+            };
+            
+            ws.onerror = function(error) {
+                log('❌ Errore WebSocket: ' + error);
+            };
+            
+            ws.onclose = function(event) {
+                log('🔌 Connessione chiusa: ' + event.code + ' - ' + event.reason);
+            };
+            
+            // Chiudi dopo 15 secondi per permettere più scambio di dati
+            setTimeout(() => {
+                if (ws.readyState === WebSocket.OPEN) {
+                    log('⏰ Chiusura automatica...');
+                    ws.close();
+                }
+            }, 15000);
+        }
+    </script>
+</body>
+</html>

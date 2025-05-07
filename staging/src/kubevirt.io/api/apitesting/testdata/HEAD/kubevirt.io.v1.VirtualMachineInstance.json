@@ -877,7 +877,11 @@
         }
       }
     ],
-    "architecture": "architectureValue"
+    "architecture": "architectureValue",
+    "directVNCAccess": {
+      "port": -4,
+      "password": "passwordValue"
+    }
   },
   "status": {
     "nodeName": "nodeNameValue",

@@ -376,6 +376,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"kubevirt.io/api/core/v1.DeveloperConfiguration":                                             schema_kubevirtio_api_core_v1_DeveloperConfiguration(ref),
 		"kubevirt.io/api/core/v1.Devices":                                                            schema_kubevirtio_api_core_v1_Devices(ref),
 		"kubevirt.io/api/core/v1.Diag288Watchdog":                                                    schema_kubevirtio_api_core_v1_Diag288Watchdog(ref),
+		"kubevirt.io/api/core/v1.DirectVNCAccessOptions":                                             schema_kubevirtio_api_core_v1_DirectVNCAccessOptions(ref),
 		"kubevirt.io/api/core/v1.DisableFreePageReporting":                                           schema_kubevirtio_api_core_v1_DisableFreePageReporting(ref),
 		"kubevirt.io/api/core/v1.DisableSerialConsoleLog":                                            schema_kubevirtio_api_core_v1_DisableSerialConsoleLog(ref),
 		"kubevirt.io/api/core/v1.Disk":                                                               schema_kubevirtio_api_core_v1_Disk(ref),
@@ -19263,6 +19264,33 @@ func schema_kubevirtio_api_core_v1_Diag288Watchdog(ref common.ReferenceCallback)
 	}
 }
 
+func schema_kubevirtio_api_core_v1_DirectVNCAccessOptions(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "DirectVNCAccessOptions defines options for direct VNC connectivity to the VM",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"port": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Port specifies the port for VNC connections (default: 5900)",
+							Type:        []string{"integer"},
+							Format:      "int32",
+						},
+					},
+					"password": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Password for VNC authentication",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
 func schema_kubevirtio_api_core_v1_DisableFreePageReporting(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -27234,12 +27262,18 @@ func schema_kubevirtio_api_core_v1_VirtualMachineInstanceSpec(ref common.Referen
 							Format:      "",
 						},
 					},
+					"directVNCAccess": {
+						SchemaProps: spec.SchemaProps{
+							Description: "DirectVNCAccess allows configuration of direct VNC connectivity to the VM",
+							Ref:         ref("kubevirt.io/api/core/v1.DirectVNCAccessOptions"),
+						},
+					},
 				},
 				Required: []string{"domain"},
 			},
 		},
 		Dependencies: []string{
-			"k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.PodDNSConfig", "k8s.io/api/core/v1.Toleration", "k8s.io/api/core/v1.TopologySpreadConstraint", "kubevirt.io/api/core/v1.AccessCredential", "kubevirt.io/api/core/v1.DomainSpec", "kubevirt.io/api/core/v1.Network", "kubevirt.io/api/core/v1.Probe", "kubevirt.io/api/core/v1.Volume"},
+			"k8s.io/api/core/v1.Affinity", "k8s.io/api/core/v1.PodDNSConfig", "k8s.io/api/core/v1.Toleration", "k8s.io/api/core/v1.TopologySpreadConstraint", "kubevirt.io/api/core/v1.AccessCredential", "kubevirt.io/api/core/v1.DirectVNCAccessOptions", "kubevirt.io/api/core/v1.DomainSpec", "kubevirt.io/api/core/v1.Network", "kubevirt.io/api/core/v1.Probe", "kubevirt.io/api/core/v1.Volume"},
 	}
 }
 

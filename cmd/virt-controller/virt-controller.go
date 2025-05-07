@@ -24,5 +24,9 @@ import (
 )
 
 func main() {
+	// Instead of modifying this file directly, it's better to:
+	// 1. Add your VNC controller to the pkg/virt-controller/watch package
+
+	// The watch package is responsible for setting up all controllers
 	watch.Execute()
 }

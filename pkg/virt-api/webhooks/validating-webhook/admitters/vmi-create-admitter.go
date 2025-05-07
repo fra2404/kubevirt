@@ -241,6 +241,8 @@ func ValidateVirtualMachineInstanceSpec(field *k8sfield.Path, spec *v1.VirtualMa
 	causes = append(causes, validateFilesystemsWithVirtIOFSEnabled(field, spec, config)...)
 	causes = append(causes, validateVideoConfig(field, spec, config)...)
 
+	causes = append(causes, validateDirectVNCAccess(field, spec)...)
+
 	return causes
 }
 
@@ -2431,6 +2433,46 @@ func validateVideoConfig(field *k8sfield.Path, spec *v1.VirtualMachineInstanceSp
 			Message: "Video configuration is not allowed when autoattachGraphicsDevice is set to false",
 			Field:   field.Child("video").String(),
 		})
+	}
+
+	return causes
+}
+func validateDirectVNCAccess(field *k8sfield.Path, spec *v1.VirtualMachineInstanceSpec) []metav1.StatusCause {
+	var causes []metav1.StatusCause
+
+	if spec.DirectVNCAccess == nil {
+		return causes
+	}
+
+	// DirectVNCAccess only works with masquerade interfaces
+	for i, iface := range spec.Domain.Devices.Interfaces {
+		if iface.InterfaceBindingMethod.Bridge != nil {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("DirectVNCAccess is not supported with bridge network interface '%s'. Only masquerade interfaces are supported.", iface.Name),
+				Field:   field.Child("directVNCAccess").String(),
+			})
+		}
+
+		if iface.InterfaceBindingMethod.SRIOV != nil {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("DirectVNCAccess is not supported with SR-IOV network interface '%s'. Only masquerade interfaces are supported.", iface.Name),
+				Field:   field.Child("directVNCAccess").String(),
+			})
+		}
+
+		_ = i
+	}
+
+	if spec.DirectVNCAccess.Port != 0 {
+		if spec.DirectVNCAccess.Port < 1024 || spec.DirectVNCAccess.Port > 65535 {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("DirectVNCAccess port must be between 1024 and 65535, got %d", spec.DirectVNCAccess.Port),
+				Field:   field.Child("directVNCAccess", "port").String(),
+			})
+		}
 	}
 
 	return causes

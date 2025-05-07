@@ -1131,6 +1131,7 @@ type Graphics struct {
 	DefaultMode   string          `xml:"defaultMode,attr,omitempty"`
 	Listen        *GraphicsListen `xml:"listen,omitempty"`
 	PasswdValidTo string          `xml:"passwdValidTo,attr,omitempty"`
+	Passwd        string          `xml:"passwd,attr,omitempty"`
 	Port          int32           `xml:"port,attr,omitempty"`
 	TLSPort       int             `xml:"tlsPort,attr,omitempty"`
 	Type          string          `xml:"type,attr"`

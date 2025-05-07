@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${VMI_NAME}-vnc
+  labels:
+    kubevirt.io/created-by: ${VMI_UID}
+    app.kubernetes.io/component: vnc-access
+    kubevirt.io/vmi: ${VMI_NAME}
+spec:
+  ports:
+  - port: 5900
+    targetPort: 5900
+    protocol: TCP
+    name: vnc
+  selector:
+    kubevirt.io/created-by: ${VMI_UID}
+  type: NodePort

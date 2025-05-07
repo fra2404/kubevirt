@@ -5706,6 +5706,19 @@ var CRDsValidation map[string]string = map[string]string{
                     attempting to run. Defaults to the compiled architecture of the
                     KubeVirt components
                   type: string
+                directVNCAccess:
+                  description: DirectVNCAccess allows configuration of direct VNC
+                    connectivity to the VM
+                  properties:
+                    password:
+                      description: Password for VNC authentication
+                      type: string
+                    port:
+                      description: 'Port specifies the port for VNC connections (default:
+                        5900)'
+                      format: int32
+                      type: integer
+                  type: object
                 dnsConfig:
                   description: |-
                     Specifies the DNS parameters of a pod.
@@ -11052,6 +11065,19 @@ var CRDsValidation map[string]string = map[string]string{
           description: Specifies the architecture of the vm guest you are attempting
             to run. Defaults to the compiled architecture of the KubeVirt components
           type: string
+        directVNCAccess:
+          description: DirectVNCAccess allows configuration of direct VNC connectivity
+            to the VM
+          properties:
+            password:
+              description: Password for VNC authentication
+              type: string
+            port:
+              description: 'Port specifies the port for VNC connections (default:
+                5900)'
+              format: int32
+              type: integer
+          type: object
         dnsConfig:
           description: |-
             Specifies the DNS parameters of a pod.
@@ -16973,6 +16999,19 @@ var CRDsValidation map[string]string = map[string]string{
                     attempting to run. Defaults to the compiled architecture of the
                     KubeVirt components
                   type: string
+                directVNCAccess:
+                  description: DirectVNCAccess allows configuration of direct VNC
+                    connectivity to the VM
+                  properties:
+                    password:
+                      description: Password for VNC authentication
+                      type: string
+                    port:
+                      description: 'Port specifies the port for VNC connections (default:
+                        5900)'
+                      format: int32
+                      type: integer
+                  type: object
                 dnsConfig:
                   description: |-
                     Specifies the DNS parameters of a pod.
@@ -21519,6 +21558,19 @@ var CRDsValidation map[string]string = map[string]string{
                             you are attempting to run. Defaults to the compiled architecture
                             of the KubeVirt components
                           type: string
+                        directVNCAccess:
+                          description: DirectVNCAccess allows configuration of direct
+                            VNC connectivity to the VM
+                          properties:
+                            password:
+                              description: Password for VNC authentication
+                              type: string
+                            port:
+                              description: 'Port specifies the port for VNC connections
+                                (default: 5900)'
+                              format: int32
+                              type: integer
+                          type: object
                         dnsConfig:
                           description: |-
                             Specifies the DNS parameters of a pod.
@@ -26772,6 +26824,19 @@ var CRDsValidation map[string]string = map[string]string{
                                 you are attempting to run. Defaults to the compiled
                                 architecture of the KubeVirt components
                               type: string
+                            directVNCAccess:
+                              description: DirectVNCAccess allows configuration of
+                                direct VNC connectivity to the VM
+                              properties:
+                                password:
+                                  description: Password for VNC authentication
+                                  type: string
+                                port:
+                                  description: 'Port specifies the port for VNC connections
+                                    (default: 5900)'
+                                  format: int32
+                                  type: integer
+                              type: object
                             dnsConfig:
                               description: |-
                                 Specifies the DNS parameters of a pod.

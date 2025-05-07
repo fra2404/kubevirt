@@ -796,7 +796,9 @@ func (t *templateService) newInitContainerRenderer(vmiSpec *v1.VirtualMachineIns
 	return NewContainerSpecRenderer(containerDisk, t.launcherImage, t.clusterConfig.GetImagePullPolicy(), cpInitContainerOpts...)
 }
 
-func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstance, volumeRenderer *VolumeRenderer, resources k8sv1.ResourceRequirements, userId int64) *ContainerSpecRenderer {
+func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstance, volumeRenderer *VolumeRenderer, resources k8sv1.ResourceRequirements, userId int64) interface {
+	Render(commands []string) k8sv1.Container
+} {
 	computeContainerOpts := []Option{
 		WithVolumeDevices(volumeRenderer.VolumeDevices()...),
 		WithVolumeMounts(volumeRenderer.Mounts()...),
@@ -805,6 +807,7 @@ func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstanc
 		WithPorts(vmi),
 		WithCapabilities(vmi),
 	}
+
 	if util.IsNonRootVMI(vmi) {
 		computeContainerOpts = append(computeContainerOpts, WithNonRoot(userId))
 		computeContainerOpts = append(computeContainerOpts, WithDropALLCapabilities())
@@ -823,7 +826,68 @@ func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstanc
 	const computeContainerName = "compute"
 	containerRenderer := NewContainerSpecRenderer(
 		computeContainerName, t.launcherImage, t.clusterConfig.GetImagePullPolicy(), computeContainerOpts...)
+
+	if vmi.Spec.DirectVNCAccess != nil {
+		vncPort := int32(5900)
+		if vmi.Spec.DirectVNCAccess.Port > 0 {
+			vncPort = vmi.Spec.DirectVNCAccess.Port
+		}
+
+		//t.addVNCProxySidecar(vmi, vncPort)
+
+
+		return &ContainerSpecRendererWithVNC{
+			delegate: containerRenderer,
+			vncPort:  vncPort,
+		}
+	}
+
 	return containerRenderer
+}
+
+/* func (t *templateService) addVNCProxySidecar(vmi *v1.VirtualMachineInstance, vncPort int32) {
+	log.Log.Infof("Adding VNC proxy sidecar for VMI %s with port %d", vmi.Name, vncPort)
+
+	// Create VNC proxy sidecar
+	vncProxySidecar := hooks.HookSidecar{
+		Image:           "alpine:latest",
+		ImagePullPolicy: k8sv1.PullIfNotPresent,
+		Name:            "vnc-proxy",
+		Command: []string{
+			"/bin/sh",
+			"-c",
+			fmt.Sprintf("apk add --no-cache socat && "+
+				"echo 'Starting VNC proxy on port %d' && "+
+				"exec socat -v TCP-LISTEN:%d,fork,reuseaddr TCP:127.0.0.1:%d",
+				vncPort, vncPort, vncPort),
+		},
+	}
+    
+    // Corregge la firma per corrispondere esattamente a SidecarCreatorFunc
+    creator := func(vmi *v1.VirtualMachineInstance, kubeVirtConfig *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
+        return hooks.HookSidecarList{vncProxySidecar}, nil
+    }
+    
+    // Ora funzionerà
+    t.sidecarCreators = append(t.sidecarCreators, creator)
+
+	log.Log.Infof("Added VNC proxy sidecar creator to list, current length: %d", len(t.sidecarCreators))
+
+} */
+
+type ContainerSpecRendererWithVNC struct {
+	delegate *ContainerSpecRenderer
+	vncPort  int32
+}
+
+func (r *ContainerSpecRendererWithVNC) Render(commands []string) k8sv1.Container {
+	container := r.delegate.Render(commands)
+	container.Ports = append(container.Ports, k8sv1.ContainerPort{
+		Name:          "vnc",
+		ContainerPort: r.vncPort,
+		Protocol:      "TCP",
+	})
+	return container
 }
 
 func (t *templateService) newVolumeRenderer(vmi *v1.VirtualMachineInstance, namespace string, requestedHookSidecarList hooks.HookSidecarList, backendStoragePVCName string) (*VolumeRenderer, error) {

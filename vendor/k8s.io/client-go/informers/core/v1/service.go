@@ -39,6 +39,71 @@ type ServiceInformer interface {
 	Lister() corev1.ServiceLister
 }
 
+// AddEventHandler implements cache.SharedIndexInformer.
+func (s *serviceInformer) AddEventHandler(handler cache.ResourceEventHandler) (cache.ResourceEventHandlerRegistration, error) {
+	panic("unimplemented")
+}
+
+// AddEventHandlerWithResyncPeriod implements cache.SharedIndexInformer.
+func (s *serviceInformer) AddEventHandlerWithResyncPeriod(handler cache.ResourceEventHandler, resyncPeriod time.Duration) (cache.ResourceEventHandlerRegistration, error) {
+	panic("unimplemented")
+}
+
+// AddIndexers implements cache.SharedIndexInformer.
+func (s *serviceInformer) AddIndexers(indexers cache.Indexers) error {
+	panic("unimplemented")
+}
+
+// GetController implements cache.SharedIndexInformer.
+func (s *serviceInformer) GetController() cache.Controller {
+	panic("unimplemented")
+}
+
+// GetIndexer implements cache.SharedIndexInformer.
+func (s *serviceInformer) GetIndexer() cache.Indexer {
+	panic("unimplemented")
+}
+
+// GetStore implements cache.SharedIndexInformer.
+func (s *serviceInformer) GetStore() cache.Store {
+	panic("unimplemented")
+}
+
+// HasSynced implements cache.SharedIndexInformer.
+func (s *serviceInformer) HasSynced() bool {
+	panic("unimplemented")
+}
+
+// IsStopped implements cache.SharedIndexInformer.
+func (s *serviceInformer) IsStopped() bool {
+	panic("unimplemented")
+}
+
+// LastSyncResourceVersion implements cache.SharedIndexInformer.
+func (s *serviceInformer) LastSyncResourceVersion() string {
+	panic("unimplemented")
+}
+
+// RemoveEventHandler implements cache.SharedIndexInformer.
+func (s *serviceInformer) RemoveEventHandler(handle cache.ResourceEventHandlerRegistration) error {
+	panic("unimplemented")
+}
+
+// Run implements cache.SharedIndexInformer.
+func (s *serviceInformer) Run(stopCh <-chan struct{}) {
+	panic("unimplemented")
+}
+
+// SetTransform implements cache.SharedIndexInformer.
+func (s *serviceInformer) SetTransform(handler cache.TransformFunc) error {
+	panic("unimplemented")
+}
+
+// SetWatchErrorHandler implements cache.SharedIndexInformer.
+func (s *serviceInformer) SetWatchErrorHandler(handler cache.WatchErrorHandler) error {
+	panic("unimplemented")
+}
+
 type serviceInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc

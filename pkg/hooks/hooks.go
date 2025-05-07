@@ -54,6 +54,7 @@ type HookSidecar struct {
 	ConfigMap       *ConfigMap                       `json:"configMap,omitempty"`
 	PVC             *PVC                             `json:"pvc,omitempty"`
 	DownwardAPI     v1.NetworkBindingDownwardAPIType `json:"-"`
+	Name			string                           `json:"name"`
 }
 
 func UnmarshalHookSidecarList(vmiObject *v1.VirtualMachineInstance) (HookSidecarList, error) {

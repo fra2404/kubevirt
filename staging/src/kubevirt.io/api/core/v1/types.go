@@ -171,6 +171,23 @@ type VirtualMachineInstanceSpec struct {
 	AccessCredentials []AccessCredential `json:"accessCredentials,omitempty"`
 	// Specifies the architecture of the vm guest you are attempting to run. Defaults to the compiled architecture of the KubeVirt components
 	Architecture string `json:"architecture,omitempty"`
+
+	// DirectVNCAccess allows configuration of direct VNC connectivity to the VM
+	// +optional
+	DirectVNCAccess *DirectVNCAccessOptions `json:"directVNCAccess,omitempty"`
+}
+
+// DirectVNCAccessOptions defines options for direct VNC connectivity to the VM
+// DirectVNCAccess is only supported with masquerade network interfaces.
+// It is not compatible with bridge or slirp network interfaces.
+type DirectVNCAccessOptions struct {
+    // Port specifies the port for VNC connections (default: 5900)
+    // +optional
+    Port int32 `json:"port,omitempty"`
+
+    // Password for VNC authentication
+    // +optional
+    Password string `json:"password,omitempty"`
 }
 
 func (vmiSpec *VirtualMachineInstanceSpec) UnmarshalJSON(data []byte) error {
