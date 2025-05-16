@@ -23,4 +23,4 @@ spec:
       image: quay.io/kubevirt/cirros-container-disk-demo
     name: containerdisk
   directVNCAccess:
-    port: 5901
+    port: 5900
