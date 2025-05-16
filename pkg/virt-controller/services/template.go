@@ -490,6 +490,12 @@ func (t *templateService) renderLaunchManifest(vmi *v1.VirtualMachineInstance, i
 	// Make sure the compute container is always the first since the mutating webhook shipped with the sriov operator
 	// for adding the requested resources to the pod will add them to the first container of the list
 	containers := []k8sv1.Container{compute}
+
+		// Check if VNC sidecar is requested via annotation
+	if _, ok := vmi.Annotations["kubevirt.io/vnc-proxy-sidecar"]; ok {
+		containers = append(containers, *createVNCProxySidecar(vmi))
+	}
+
 	containersDisks := containerdisk.GenerateContainers(vmi, t.clusterConfig, imageIDs, containerDisks, virtBinDir)
 	containers = append(containers, containersDisks...)
 
@@ -668,6 +674,29 @@ func (t *templateService) renderLaunchManifest(vmi *v1.VirtualMachineInstance, i
 	}
 
 	pod.Spec.Volumes = append(pod.Spec.Volumes, sidecarVolumes...)
+	
+	// Se usiamo il sidecar VNC, assicuriamoci che il volume kubevirt-private esista
+	if _, ok := vmi.Annotations["kubevirt.io/vnc-proxy-sidecar"]; ok {
+		privateVolumeExists := false
+		for _, vol := range pod.Spec.Volumes {
+			if vol.Name == "kubevirt-private" {
+				privateVolumeExists = true
+				break
+			}
+		}
+		if !privateVolumeExists {
+			hostPathDirectory := k8sv1.HostPathDirectory
+			pod.Spec.Volumes = append(pod.Spec.Volumes, k8sv1.Volume{
+				Name: "kubevirt-private",
+				VolumeSource: k8sv1.VolumeSource{
+					HostPath: &k8sv1.HostPathVolumeSource{
+						Path: "/var/run/kubevirt-private",
+						Type: &hostPathDirectory,
+					},
+				},
+			})
+		}
+	}
 
 	return &pod, nil
 }
@@ -878,6 +907,40 @@ func sidecarVolumeMount() k8sv1.VolumeMount {
 		Name:      hookSidecarSocks,
 		MountPath: hooks.HookSocketsSharedDirectory,
 	}
+}
+
+func createVNCProxySidecar(vmi *v1.VirtualMachineInstance) *k8sv1.Container {
+    vncProxy := &k8sv1.Container{
+        Name:  "vnc-proxy",
+        Image: "alpine:latest",
+        Command: []string{
+            "/bin/sh",
+            "-c",
+            "apk add --no-cache socat && " +
+            "while true; do " +
+            "  if [ -S /var/run/kubevirt-private/" + string(vmi.UID) + "/virt-vnc ]; then " +
+            "    echo 'Socket found, starting proxy' && " +
+            "    socat TCP-LISTEN:5900,fork,reuseaddr UNIX-CONNECT:/var/run/kubevirt-private/" + string(vmi.UID) + "/virt-vnc || true; " +
+            "  else " +
+            "    echo 'Waiting for socket...' && sleep 5; " +
+            "  fi " +
+            "done",
+        },
+        Ports: []k8sv1.ContainerPort{
+            {
+                Name:          "vnc",
+                Protocol:      k8sv1.ProtocolTCP,
+                ContainerPort: 5900,
+            },
+        },
+        VolumeMounts: []k8sv1.VolumeMount{
+            {
+                Name:      "kubevirt-private",
+                MountPath: "/var/run/kubevirt-private",
+            },
+        },
+    }
+    return vncProxy
 }
 
 func configMapVolumeMount(v hooks.ConfigMap) k8sv1.VolumeMount {

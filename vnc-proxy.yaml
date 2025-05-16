@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vnc-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:    kubectl get svc vnc-proxy-svc
+      app: vnc-proxy
+  template:
+    metadata:
+      labels:
+        app: vnc-proxy
+    spec:
+      serviceAccountName: vnc-proxy-sa
+      containers:
+        - name: socat-proxy
+          image: nicolaka/netshoot:latest
+          command:
+          - "/bin/bash"
+          - "-c"
+          - |
+            echo "Cercando pod della VM..."
+            VM_POD=$(kubectl get pods | grep virt-launcher-vmi-vnc-simple | head -1 | awk '{print $1}')
+            echo "Trovato pod VM: $VM_POD"
+            
+            # Avvia port-forward
+            echo "Avvio port-forward per $VM_POD"
+            kubectl port-forward $VM_POD 12345:5900 > /tmp/portforward.log 2>&1 &
+            PF_PID=$!
+            sleep 3
+            
+            # Avvia socat
+            echo "Avvio socat"
+            exec socat TCP-LISTEN:5900,fork,reuseaddr TCP:localhost:12345
