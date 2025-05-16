@@ -237,7 +237,8 @@ func (c *ServiceController) createOrUpdateVNCService(vmi *v1.VirtualMachineInsta
 			Selector: map[string]string{
 				"kubevirt.io/created-by": string(vmi.UID),
 			},
-			Type: corev1.ServiceTypeNodePort,
+			Type:                  corev1.ServiceTypeNodePort,
+			ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
 		},
 	}
 

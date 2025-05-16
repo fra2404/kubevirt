@@ -655,14 +655,42 @@ func (vca *VirtControllerApp) initCommon() {
 		vca.resourceQuotaInformer.GetStore(),
 		vca.namespaceStore,
 		services.WithSidecarCreator(
-			func(vmi *v1.VirtualMachineInstance, _ *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
-				return hooks.UnmarshalHookSidecarList(vmi)
-			}),
-		services.WithSidecarCreator(netbinding.NetBindingPluginSidecarList),
-		services.WithNetBindingPluginMemoryCalculator(netbinding.MemoryCalculator{}),
-		services.WithAnnotationsGenerators(netAnnotationsGenerator, storageannotations.Generator{}),
-		services.WithNetTargetAnnotationsGenerator(netAnnotationsGenerator),
-	)
+            func(vmi *v1.VirtualMachineInstance, _ *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
+                return hooks.UnmarshalHookSidecarList(vmi)
+            }),
+        services.WithSidecarCreator(netbinding.NetBindingPluginSidecarList),
+        services.WithNetBindingPluginMemoryCalculator(netbinding.MemoryCalculator{}),
+        services.WithAnnotationsGenerators(netAnnotationsGenerator, storageannotations.Generator{}),
+        services.WithNetTargetAnnotationsGenerator(netAnnotationsGenerator),
+        // Aggiunta del VNC sidecar creator
+       /*  services.WithSidecarCreator(
+				func(vmi *v1.VirtualMachineInstance, _ *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
+					if vmi.Annotations["kubevirt.io/enable-vnc-proxy"] == "true" {
+						vncPort := int32(5900)  // Porta standard VNC
+						
+						log.Log.Infof("Adding VNC proxy sidecar for VMI %s with port %d", vmi.Name, vncPort)
+						vncProxySidecar := hooks.HookSidecar{
+						Image:           "nicolaka/netshoot:latest",
+						ImagePullPolicy: k8sv1.PullIfNotPresent,
+						Name:            "vnc-proxy",
+						Command: []string{
+							"sh",
+							"-c",
+							fmt.Sprintf(
+								"echo 'Starting VNC proxy from %d to %d' && "+
+								"while true; do "+
+								"  socat -v TCP-LISTEN:%d,fork,reuseaddr TCP:127.0.0.1:%d || "+
+								"  echo 'Connection failed, retrying in 5 seconds...' && "+
+								"  sleep 5; "+
+								"done",
+								vncPort+1000, vncPort, vncPort+1000, vncPort),
+						},
+					}
+                    return hooks.HookSidecarList{vncProxySidecar}, nil
+                }
+                return nil, nil
+            }), */
+    )
 
 	topologyHinter := topology.NewTopologyHinter(vca.nodeInformer.GetStore(), vca.vmiInformer.GetStore(), vca.clusterConfig)
 
