@@ -493,6 +493,13 @@ func (t *templateService) renderLaunchManifest(vmi *v1.VirtualMachineInstance, i
 	// Make sure the compute container is always the first since the mutating webhook shipped with the sriov operator
 	// for adding the requested resources to the pod will add them to the first container of the list
 	containers := []k8sv1.Container{compute}
+	
+	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+		// Se la VM ha grafica/VNC attivata, aggiungi il proxy sidecar
+		vncPort := int32(5901)
+		vncProxySidecar := createVNCProxySidecar(vncPort)
+		containers = append(containers, vncProxySidecar)
+	}
 	if !t.clusterConfig.ImageVolumeEnabled() {
 		containersDisks := containerdisk.GenerateContainers(vmi, t.clusterConfig, imageIDs, containerDisks, virtBinDir)
 		containers = append(containers, containersDisks...)
@@ -872,11 +879,84 @@ type ContainerSpecRendererWithVNC struct {
 	vncPort  int32
 }
 
+func createVNCProxySidecar(vncPort int32) k8sv1.Container {
+    // Usa 5902 come porta di ascolto del proxy
+    proxyPort := vncPort + 1  // 5901 + 1 = 5902
+    
+    return k8sv1.Container{
+        Name:  "vnc-proxy",
+        Image: "alpine:latest",
+        Command: []string{
+            "/bin/sh",
+            "-c",
+			fmt.Sprintf(`apk add --no-cache socat iproute2 procps && 
+				echo "Starting VNC proxy on port %d forwarding to %d" &&
+				
+				# Usa sleep iniziale più lungo per dare tempo a QEMU di avviarsi completamente
+				echo "Attendendo 15 secondi per dare tempo a QEMU di avviarsi..."
+				sleep 15
+				
+				# Ottieni l'IP del container
+				POD_IP=$(hostname -i)
+				echo "Using Pod IP: $POD_IP"
+				
+				# Verifica se il server VNC è attivo
+				for i in $(seq 1 30); do
+					echo "Tentativo $i: connessione a $POD_IP:%d"
+					nc -z $POD_IP %d 2>/dev/null
+					if [ $? -eq 0 ]; then
+					echo "Server VNC trovato, avvio proxy su porta %d verso $POD_IP:%d"
+					exec socat -v TCP-LISTEN:%d,fork,bind=0.0.0.0,reuseaddr TCP:$POD_IP:%d
+					exit 0
+					fi
+					sleep 2
+				done
+				
+				echo "Server VNC non trovato dopo 30 tentativi"
+				exit 1
+				`, proxyPort, vncPort, vncPort, vncPort, proxyPort, vncPort, proxyPort, vncPort),
+        },
+        Ports: []k8sv1.ContainerPort{
+            {
+                Name:          "vnc-proxy",
+                ContainerPort: proxyPort,  // Usa 5902 invece di 5901
+                Protocol:      "TCP",
+            },
+        },
+        Resources: k8sv1.ResourceRequirements{
+            Limits: k8sv1.ResourceList{
+                k8sv1.ResourceCPU:    resource.MustParse("100m"),
+                k8sv1.ResourceMemory: resource.MustParse("64Mi"),
+            },
+            Requests: k8sv1.ResourceList{
+                k8sv1.ResourceCPU:    resource.MustParse("10m"),
+                k8sv1.ResourceMemory: resource.MustParse("32Mi"),
+            },
+        },
+        VolumeMounts: []k8sv1.VolumeMount{
+            {
+                Name:      "libvirt-runtime",
+                MountPath: "/var/run/libvirt",
+            },
+        },
+        // Aggiungi SecurityContext per eseguire come root
+        SecurityContext: &k8sv1.SecurityContext{
+            RunAsUser:  pointer.P(int64(0)),      // Esegui come root (UID 0)
+            RunAsGroup: pointer.P(int64(0)),      // Esegui come root group (GID 0)
+            RunAsNonRoot: pointer.P(false),       // Non forzare esecuzione come non-root
+            Capabilities: &k8sv1.Capabilities{
+                Add: []k8sv1.Capability{"NET_BIND_SERVICE"}, // Permette di accedere alle porte <1024
+            },
+        },
+    }
+}
+
 func (r *ContainerSpecRendererWithVNC) Render(commands []string) k8sv1.Container {
 	container := r.delegate.Render(commands)
 	container.Ports = append(container.Ports, k8sv1.ContainerPort{
 		Name:          "vnc",
 		ContainerPort: r.vncPort,
+		//	HostPort:      r.vncPort, - tentativo, non funziona
 		Protocol:      "TCP",
 	})
 	return container

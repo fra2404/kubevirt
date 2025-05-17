@@ -207,9 +207,9 @@ func (c *ServiceController) createOrUpdateVNCService(vmi *v1.VirtualMachineInsta
 	serviceName := fmt.Sprintf("%s-vnc", vmi.Name)
 
 	// Get the VNC port from DirectVNCAccess, default to 5900
-	port := int32(5900)
+	port := int32(5902)
 	if vmi.Spec.DirectVNCAccess.Port > 0 {
-		port = vmi.Spec.DirectVNCAccess.Port
+		port = vmi.Spec.DirectVNCAccess.Port + 1
 	}
 
 	service := &corev1.Service{

@@ -1834,9 +1834,11 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 
 	}
 
-	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
-		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
+		// CASO 1
 
+		/* if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
+	
 		graphics := api.Graphics{
 			Type: "vnc",
 			Listen: &api.GraphicsListen{
@@ -1844,20 +1846,37 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 				Address: "0.0.0.0",
 			},
 		}
-
+	
 		// Use port from DirectVNCAccess if specified, otherwise use default
 		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Port > 0 {
 			graphics.Port = vmi.Spec.DirectVNCAccess.Port
 		} else {
 			graphics.Port = 5900
 		}
-
+	
 		// Set password if provided
 		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Password != "" {
 			graphics.Passwd = vmi.Spec.DirectVNCAccess.Password
 		}
-
+		
 		domain.Spec.Devices.Graphics = []api.Graphics{graphics}
+		
+	} */
+
+	// CASO 2
+
+	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+	c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
+	
+	// NON creare la configurazione Graphics standard
+	// graphics := api.Graphics{...}
+	// domain.Spec.Devices.Graphics = []api.Graphics{graphics}
+	
+	// Usare solo argomenti QEMU diretti
+	initializeQEMUCmdAndQEMUArg(domain)
+	domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, 
+		api.Arg{Value: "-vnc"},
+		api.Arg{Value: "0.0.0.0:1,websocket=on"})  
 	}
 
 	// Add virtio interfaces
