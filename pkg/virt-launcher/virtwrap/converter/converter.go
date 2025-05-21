@@ -1860,6 +1860,58 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 		domain.Spec.Devices.Graphics = []api.Graphics{graphics}
 	}
 
+	/**
+	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
+		
+		// Se DirectVNCAccess è configurato, usa solo argomenti QEMU diretti
+		if vmi.Spec.DirectVNCAccess != nil {
+			initializeQEMUCmdAndQEMUArg(domain)
+			
+			vncPort := 0 // Posizione relativa per QEMU: 0 = 5900, 1 = 5901, ecc.
+			if vmi.Spec.DirectVNCAccess.Port > 0 {
+				vncPort = int(vmi.Spec.DirectVNCAccess.Port) - 5900
+				if vncPort < 0 {
+					vncPort = 0
+				}
+			}
+			
+			// Configura password se fornita
+			vncOption := fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort, vncPort+5700)
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				vncOption += fmt.Sprintf(",password")
+			}
+			
+			// Forza QEMU a fare binding su tutte le interfacce
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-vnc"})
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: vncOption})
+			
+			// Se c'è password, aggiungila tramite QMP
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-object"})
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, 
+					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s", vmi.Spec.DirectVNCAccess.Password)})
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-set"})
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, 
+					api.Arg{Value: "vnc.password=on"})
+			}
+		} else {
+			// Configurazione VNC standard attraverso dispositivo grafico libvirt
+			// (solo se DirectVNCAccess non è configurato)
+			graphics := api.Graphics{
+				Type: "vnc",
+				Listen: &api.GraphicsListen{
+					Type:    "address",
+					Address: "127.0.0.1", // Default sicuro
+				},
+			}
+			
+			domain.Spec.Devices.Graphics = []api.Graphics{graphics}
+		}
+	}
+	*/
+
+
 	// Add virtio interfaces
 	if vmi.Annotations["kubevirt.io/graphics"] == "virtio" {
 		heads := uint(1)
