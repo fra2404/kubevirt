@@ -1840,16 +1840,9 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 		graphics := api.Graphics{
 			Type: "vnc",
 			Listen: &api.GraphicsListen{
-				Type:    "address",
-				Address: "0.0.0.0",
+				Type:  "socket",
+				Socket: filepath.Join("/var/run/kubevirt-private", domain.ObjectMeta.Name, "vnc.sock"),
 			},
-		}
-
-		// Use port from DirectVNCAccess if specified, otherwise use default
-		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Port > 0 {
-			graphics.Port = vmi.Spec.DirectVNCAccess.Port
-		} else {
-			graphics.Port = 5900
 		}
 
 		// Set password if provided

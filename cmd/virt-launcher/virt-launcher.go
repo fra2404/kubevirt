@@ -60,6 +60,8 @@ import (
 	virtcli "kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/cli"
 	cmdserver "kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/cmd-server"
 	"kubevirt.io/kubevirt/pkg/virt-launcher/virtwrap/util"
+	"kubevirt.io/kubevirt/pkg/virt-launcher/vnc"
+
 )
 
 const defaultStartTimeout = 3 * time.Minute
@@ -480,8 +482,34 @@ func main() {
 	// managing virtual machines.
 	markReady()
 
-	domain := waitForDomainUUID(*qemuTimeout, events, signalStopChan, domainManager)
+		domain := waitForDomainUUID(*qemuTimeout, events, signalStopChan, domainManager)
 	if domain != nil {
+		// Inizializza il proxy VNC se la VM ha un dispositivo grafico
+		if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+			// Determina la porta VNC da usare
+			vncPort := 5901 // Default è 5901 per il proxy
+			if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Port > 0 {
+				vncPort = int(vmi.Spec.DirectVNCAccess.Port)
+			}
+			
+			// Usa lo stesso percorso che viene usato in converter.go
+			vncSocketPath := filepath.Join("/var/run/kubevirt-private", domain.ObjectMeta.Name, "vnc.sock")
+			vncSocketDir := filepath.Dir(vncSocketPath)
+			
+			// Crea la directory per il socket se non esiste
+			if err := os.MkdirAll(vncSocketDir, 0755); err != nil {
+				log.Log.Reason(err).Errorf("Impossibile creare la directory per il socket VNC: %s", vncSocketDir)
+			} else {
+				log.Log.Infof("Avvio del proxy VNC sulla porta %d verso socket %s", vncPort, vncSocketPath)
+				
+				vncProxy := vnc.NewVNCProxy(vncSocketPath, vncPort)
+				if err := vncProxy.Start(); err != nil {
+					log.Log.Reason(err).Error("Impossibile avviare proxy VNC")
+				} else {
+					defer vncProxy.Stop()
+				}
+			}
+		}
 		var pidDir string
 		if *runWithNonRoot {
 			pidDir = "/run/libvirt/qemu/run"
