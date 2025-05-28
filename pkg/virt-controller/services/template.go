@@ -827,7 +827,6 @@ func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstanc
 
 		//t.addVNCProxySidecar(vmi, vncPort)
 
-
 		return &ContainerSpecRendererWithVNC{
 			delegate: containerRenderer,
 			vncPort:  vncPort,
@@ -854,12 +853,12 @@ func (t *templateService) newContainerSpecRenderer(vmi *v1.VirtualMachineInstanc
 				vncPort, vncPort, vncPort),
 		},
 	}
-    
+
     // Corregge la firma per corrispondere esattamente a SidecarCreatorFunc
     creator := func(vmi *v1.VirtualMachineInstance, kubeVirtConfig *v1.KubeVirtConfiguration) (hooks.HookSidecarList, error) {
         return hooks.HookSidecarList{vncProxySidecar}, nil
     }
-    
+
     // Ora funzionerà
     t.sidecarCreators = append(t.sidecarCreators, creator)
 

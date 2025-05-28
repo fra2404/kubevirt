@@ -2,9 +2,7 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = [
-        "vnc-proxy.go",
-    ],
+    srcs = ["vnc-proxy.go"],
     importpath = "kubevirt.io/kubevirt/pkg/virt-launcher/vnc",
     visibility = ["//visibility:public"],
     deps = [

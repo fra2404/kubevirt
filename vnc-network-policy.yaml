@@ -1,0 +1,14 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-vnc-access
+spec:
+  podSelector:
+    matchLabels:
+      kubevirt.io: virt-launcher
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 5901
+  policyTypes:
+  - Ingress
