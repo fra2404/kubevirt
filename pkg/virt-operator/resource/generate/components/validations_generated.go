@@ -5745,9 +5745,12 @@ var CRDsValidation map[string]string = map[string]string{
                           of a pod.
                         properties:
                           name:
-                            description: Required.
+                            description: |-
+                              Name is this DNS resolver option's name.
+                              Required.
                             type: string
                           value:
+                            description: Value is this DNS resolver option's value.
                             type: string
                         type: object
                       type: array
@@ -11086,9 +11089,12 @@ var CRDsValidation map[string]string = map[string]string{
                   pod.
                 properties:
                   name:
-                    description: Required.
+                    description: |-
+                      Name is this DNS resolver option's name.
+                      Required.
                     type: string
                   value:
+                    description: Value is this DNS resolver option's value.
                     type: string
                 type: object
               type: array
@@ -16987,9 +16993,12 @@ var CRDsValidation map[string]string = map[string]string{
                           of a pod.
                         properties:
                           name:
-                            description: Required.
+                            description: |-
+                              Name is this DNS resolver option's name.
+                              Required.
                             type: string
                           value:
+                            description: Value is this DNS resolver option's value.
                             type: string
                         type: object
                       type: array
@@ -21506,9 +21515,13 @@ var CRDsValidation map[string]string = map[string]string{
                                   options of a pod.
                                 properties:
                                   name:
-                                    description: Required.
+                                    description: |-
+                                      Name is this DNS resolver option's name.
+                                      Required.
                                     type: string
                                   value:
+                                    description: Value is this DNS resolver option's
+                                      value.
                                     type: string
                                 type: object
                               type: array
@@ -26724,9 +26737,13 @@ var CRDsValidation map[string]string = map[string]string{
                                       options of a pod.
                                     properties:
                                       name:
-                                        description: Required.
+                                        description: |-
+                                          Name is this DNS resolver option's name.
+                                          Required.
                                         type: string
                                       value:
+                                        description: Value is this DNS resolver option's
+                                          value.
                                         type: string
                                     type: object
                                   type: array
