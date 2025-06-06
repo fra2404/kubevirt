@@ -1167,7 +1167,7 @@ func Convert_v1_Firmware_To_related_apis(vmi *v1.VirtualMachineInstance, domain 
 		},
 	}
 
-	if isEFIVMI(vmi) {
+	if vmi.IsBootloaderEFI() {
 		domain.Spec.OS.BootLoader = &api.Loader{
 			Path:     c.EFIConfiguration.EFICode,
 			ReadOnly: "yes",
@@ -1840,6 +1840,7 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 	}
 
 	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
+<<<<<<< HEAD
 		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
 
 		if vmi.Spec.DirectVNCAccess != nil {
@@ -1878,6 +1879,15 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 		} else {
 			// Configurazione VNC standard
 			graphics := api.Graphics{
+=======
+		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && vmi.IsBootloaderEFI())
+		domain.Spec.Devices.Graphics = []api.Graphics{
+			{
+				Listen: &api.GraphicsListen{
+					Type:   "socket",
+					Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
+				},
+>>>>>>> f8eea4a2c2 (converter: use vmi.IsBootloaderEFI())
 				Type: "vnc",
 				Listen: &api.GraphicsListen{
 					Type:    "address",
@@ -2179,6 +2189,7 @@ func domainVCPUTopologyForHotplug(vmi *v1.VirtualMachineInstance, domain *api.Do
 		CPUs:      cpuCount,
 	}
 }
+<<<<<<< HEAD
 
 func isEFIVMI(vmi *v1.VirtualMachineInstance) bool {
 	return vmi.Spec.Domain.Firmware != nil &&
@@ -2209,3 +2220,5 @@ func validateDirectVNCAccessCompatibility(vmi *v1.VirtualMachineInstance) error 
     
     return nil
 }
+=======
+>>>>>>> f8eea4a2c2 (converter: use vmi.IsBootloaderEFI())
