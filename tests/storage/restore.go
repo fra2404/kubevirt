@@ -2037,6 +2037,20 @@ var _ = Describe(SIG("VirtualMachineRestore Tests", func() {
 				Expect(pvc.OwnerReferences[0].Name).To(Equal(restoreVM.Name))
 			})
 
+			It("with run strategy and snapshot should successfully restore", func() {
+				vm = renderVMWithRegistryImportDataVolume(cd.ContainerDiskFedoraTestTooling, snapshotStorageClass)
+				libvmi.WithRunStrategy(v1.RunStrategyRerunOnFailure)(vm)
+				vm, err = virtClient.VirtualMachine(testsuite.GetTestNamespace(nil)).Create(context.Background(), vm, metav1.CreateOptions{})
+				vm = libvmops.StartVirtualMachine(vm)
+				Eventually(ThisVMIWith(vm.Namespace, vm.Name), 360).Should(BeInPhase(v1.Running))
+				Expect(vm.Spec.RunStrategy).To(HaveValue(Equal(v1.RunStrategyRerunOnFailure)))
+				doRestoreNoVMStart("", console.LoginToFedora, onlineSnapshot, false, vm.Name)
+				Expect(restore.Status.Restores).To(HaveLen(1))
+				restoredVM, err := virtClient.VirtualMachine(vm.Namespace).Get(context.Background(), vm.Name, metav1.GetOptions{})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(restoredVM.Spec.RunStrategy).To(Equal(pointer.P(v1.RunStrategyRerunOnFailure)))
+			})
+
 			Context("with memory dump", func() {
 				var memoryDumpPVC *corev1.PersistentVolumeClaim
 				var memoryDumpPVCName string
