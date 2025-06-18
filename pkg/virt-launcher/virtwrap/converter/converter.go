@@ -1837,37 +1837,61 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
 		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
 
-		graphics := api.Graphics{
-			Type: "vnc",
-			Listen: &api.GraphicsListen{
-				Type:    "address",
-				Address: "0.0.0.0",
-			},
-		}
+		if vmi.Spec.DirectVNCAccess != nil {
+			// Usa argomenti QEMU diretti per configurare VNC con WebSocket
+			initializeQEMUCmdAndQEMUArg(domain)
 
-		// Use port from DirectVNCAccess if specified, otherwise use default
-		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Port > 0 {
-			graphics.Port = vmi.Spec.DirectVNCAccess.Port
+			vncPort := 5900
+			websocketPort := 6900
+
+			if vmi.Spec.DirectVNCAccess.Port > 0 {
+				vncPort = int(vmi.Spec.DirectVNCAccess.Port)
+				websocketPort = vncPort + 1000
+			}
+
+			// Configura VNC con WebSocket tramite argomenti QEMU
+			vncOption := fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort-5900, websocketPort)
+
+			// Aggiungi password SOLO se fornita
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				vncOption += ",password=on"
+			}
+
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+				api.Arg{Value: "-vnc"},
+				api.Arg{Value: vncOption})
+
+			// Configura password SOLO se fornita
+			if vmi.Spec.DirectVNCAccess.Password != "" {
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+					api.Arg{Value: "-object"},
+					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s", vmi.Spec.DirectVNCAccess.Password)})
+			}
+
+			// Rimuovi il dispositivo grafico standard per evitare conflitti
+			domain.Spec.Devices.Graphics = []api.Graphics{}
 		} else {
-			graphics.Port = 5900
+			// Configurazione VNC standard
+			graphics := api.Graphics{
+				Type: "vnc",
+				Listen: &api.GraphicsListen{
+					Type:    "address",
+					Address: "127.0.0.1",
+				},
+				Port: 5900,
+			}
+			domain.Spec.Devices.Graphics = []api.Graphics{graphics}
 		}
-
-		// Set password if provided
-		if vmi.Spec.DirectVNCAccess != nil && vmi.Spec.DirectVNCAccess.Password != "" {
-			graphics.Passwd = vmi.Spec.DirectVNCAccess.Password
-		}
-
-		domain.Spec.Devices.Graphics = []api.Graphics{graphics}
 	}
 
 	/**
 	if vmi.Spec.Domain.Devices.AutoattachGraphicsDevice == nil || *vmi.Spec.Domain.Devices.AutoattachGraphicsDevice {
 		c.Architecture.AddGraphicsDevice(vmi, domain, c.BochsForEFIGuests && isEFIVMI(vmi))
-		
+
 		// Se DirectVNCAccess è configurato, usa solo argomenti QEMU diretti
 		if vmi.Spec.DirectVNCAccess != nil {
 			initializeQEMUCmdAndQEMUArg(domain)
-			
+
 			vncPort := 0 // Posizione relativa per QEMU: 0 = 5900, 1 = 5901, ecc.
 			if vmi.Spec.DirectVNCAccess.Port > 0 {
 				vncPort = int(vmi.Spec.DirectVNCAccess.Port) - 5900
@@ -1875,24 +1899,24 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 					vncPort = 0
 				}
 			}
-			
+
 			// Configura password se fornita
 			vncOption := fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort, vncPort+5700)
 			if vmi.Spec.DirectVNCAccess.Password != "" {
 				vncOption += fmt.Sprintf(",password")
 			}
-			
+
 			// Forza QEMU a fare binding su tutte le interfacce
 			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-vnc"})
 			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: vncOption})
-			
+
 			// Se c'è password, aggiungila tramite QMP
 			if vmi.Spec.DirectVNCAccess.Password != "" {
 				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-object"})
-				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, 
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
 					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s", vmi.Spec.DirectVNCAccess.Password)})
 				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, api.Arg{Value: "-set"})
-				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, 
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
 					api.Arg{Value: "vnc.password=on"})
 			}
 		} else {
@@ -1905,12 +1929,11 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 					Address: "127.0.0.1", // Default sicuro
 				},
 			}
-			
+
 			domain.Spec.Devices.Graphics = []api.Graphics{graphics}
 		}
 	}
 	*/
-
 
 	// Add virtio interfaces
 	if vmi.Annotations["kubevirt.io/graphics"] == "virtio" {
