@@ -68,6 +68,7 @@ type NetPod struct {
 	vmiSpecNets      []v1.Network
 	vmiIfaceStatuses []v1.VirtualMachineInstanceNetworkInterface
 	vmiUID           string
+	vmi              *v1.VirtualMachineInstance
 	podPID           int
 	ownerID          int
 	queuesCap        int
@@ -96,7 +97,7 @@ func NewNetPod(vmiNetworks []v1.Network, vmiIfaces []v1.Interface, vmiUID string
 		state:         state,
 
 		nmstateAdapter:    nmstate.New(),
-		masqueradeAdapter: masquerade.New(),
+		// masqueradeAdapter: masquerade.New(),
 
 		cacheCreator:         cache.CacheCreator{},
 		bindingPluginsByName: map[string]v1.InterfaceBindingPlugin{},
@@ -106,6 +107,13 @@ func NewNetPod(vmiNetworks []v1.Network, vmiIfaces []v1.Interface, vmiUID string
 	for _, opt := range opts {
 		opt(&n)
 	}
+
+	if n.vmi != nil {
+        n.masqueradeAdapter = masquerade.New(masquerade.WithVNCConfig(n.vmi))
+    } else {
+        n.masqueradeAdapter = masquerade.New()
+    }
+
 	return n
 }
 
@@ -137,6 +145,12 @@ func WithLogger(logger *log.FilteredLogger) option {
 	return func(n *NetPod) {
 		n.log = logger
 	}
+}
+
+func WithVMI(vmi *v1.VirtualMachineInstance) option {
+    return func(n *NetPod) {
+        n.vmi = vmi
+    }
 }
 
 func WithVMIIfaceStatuses(vmiIfaceStatuses []v1.VirtualMachineInstanceNetworkInterface) option {
