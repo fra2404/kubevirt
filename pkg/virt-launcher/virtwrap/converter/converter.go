@@ -1396,6 +1396,11 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 	precond.MustNotBeNil(domain)
 	precond.MustNotBeNil(c)
 
+	// Aggiungi questa validazione subito dopo le precondizioni
+    if err := validateDirectVNCAccessCompatibility(vmi); err != nil {
+        return fmt.Errorf("DirectVNCAccess validation failed: %v", err)
+    }
+
 	domain.Spec.Name = api.VMINamespaceKeyFunc(vmi)
 	domain.ObjectMeta.Name = vmi.ObjectMeta.Name
 	domain.ObjectMeta.Namespace = vmi.ObjectMeta.Namespace
@@ -2179,4 +2184,28 @@ func isEFIVMI(vmi *v1.VirtualMachineInstance) bool {
 	return vmi.Spec.Domain.Firmware != nil &&
 		vmi.Spec.Domain.Firmware.Bootloader != nil &&
 		vmi.Spec.Domain.Firmware.Bootloader.EFI != nil
+}
+
+// Funzione di validazione per DirectVNCAccess
+func validateDirectVNCAccessCompatibility(vmi *v1.VirtualMachineInstance) error {
+    if vmi.Spec.DirectVNCAccess == nil {
+        return nil // Se DirectVNCAccess non è presente, non fare validazione
+    }
+
+    for _, iface := range vmi.Spec.Domain.Devices.Interfaces {
+        // Bridge non è compatibile
+        if iface.InterfaceBindingMethod.Bridge != nil {
+            return fmt.Errorf("DirectVNCAccess is not compatible with bridge network interface '%s'. Only masquerade interfaces are supported", iface.Name)
+        }
+
+        // SR-IOV non è compatibile
+        if iface.InterfaceBindingMethod.SRIOV != nil {
+            return fmt.Errorf("DirectVNCAccess is not compatible with SR-IOV network interface '%s'. Only masquerade interfaces are supported", iface.Name)
+        }
+        
+        // Masquerade è OK (sia esplicito che implicito)
+        // Se nessun tipo è specificato, viene usato masquerade per default
+    }
+    
+    return nil
 }

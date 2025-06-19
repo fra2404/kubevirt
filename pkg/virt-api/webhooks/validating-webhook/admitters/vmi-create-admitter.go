@@ -220,6 +220,8 @@ func ValidateVirtualMachineInstanceSpec(field *k8sfield.Path, spec *v1.VirtualMa
 	causes = append(causes, validateDownwardMetrics(field, spec, config)...)
 	causes = append(causes, validateFilesystemsWithVirtIOFSEnabled(field, spec, config)...)
 
+	causes = append(causes, validateDirectVNCAccess(field, spec)...)
+
 	return causes
 }
 
@@ -2352,4 +2354,50 @@ func validateCPUHotplug(field *k8sfield.Path, spec *v1.VirtualMachineInstanceSpe
 		}
 	}
 	return causes
+}
+
+func validateDirectVNCAccess(field *k8sfield.Path, spec *v1.VirtualMachineInstanceSpec) []metav1.StatusCause {
+    var causes []metav1.StatusCause
+    
+    if spec.DirectVNCAccess == nil {
+        return causes // Se DirectVNCAccess non è specificato, va bene
+    }
+    
+    // Controlla tutte le interfacce di rete
+    for i, iface := range spec.Domain.Devices.Interfaces {
+        // Se l'interfaccia ha un tipo bridge specificato
+        if iface.InterfaceBindingMethod.Bridge != nil {
+            causes = append(causes, metav1.StatusCause{
+                Type: metav1.CauseTypeFieldValueInvalid,
+                Message: fmt.Sprintf("DirectVNCAccess is not supported with bridge network interface '%s'. Only masquerade interfaces are supported.", iface.Name),
+                Field: field.Child("directVNCAccess").String(),
+            })
+        }
+        
+        // Verifica per slirp (deprecato ma ancora presente)
+        if iface.InterfaceBindingMethod.SRIOV != nil {
+            causes = append(causes, metav1.StatusCause{
+                Type: metav1.CauseTypeFieldValueInvalid,
+                Message: fmt.Sprintf("DirectVNCAccess is not supported with SR-IOV network interface '%s'. Only masquerade interfaces are supported.", iface.Name),
+                Field: field.Child("directVNCAccess").String(),
+            })
+        }
+        
+        // Se non è specificato nessun tipo o è masquerade, è OK
+        // (masquerade è il default e DirectVNCAccess è supportato)
+        _ = i // Evita warning unused variable
+    }
+    
+    // Validazione della porta se specificata
+    if spec.DirectVNCAccess.Port != 0 {
+        if spec.DirectVNCAccess.Port < 1024 || spec.DirectVNCAccess.Port > 65535 {
+            causes = append(causes, metav1.StatusCause{
+                Type: metav1.CauseTypeFieldValueInvalid,
+                Message: fmt.Sprintf("DirectVNCAccess port must be between 1024 and 65535, got %d", spec.DirectVNCAccess.Port),
+                Field: field.Child("directVNCAccess", "port").String(),
+            })
+        }
+    }
+    
+    return causes
 }
