@@ -187,6 +187,11 @@ type DirectVNCAccessOptions struct {
     // Password for VNC authentication
     // +optional
     Password string `json:"password,omitempty"`
+
+	// EnableVirtioGPU enables virtio-gpu device for better graphics performance
+    // +optional
+    // +kubebuilder:default=true
+    EnableVirtioGPU *bool `json:"enableVirtioGPU,omitempty"`
 }
 
 func (vmiSpec *VirtualMachineInstanceSpec) UnmarshalJSON(data []byte) error {
