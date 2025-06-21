@@ -44,6 +44,7 @@ type MasqPod struct {
 	nftable        nftable
 	istioEnabled   bool
 	migrationPorts []int
+	vncConfig      *VNCConfig
 }
 
 const (
@@ -56,6 +57,12 @@ const (
 	kubevirtPreInboundChain  = "KUBEVIRT_PREINBOUND"
 	kubevirtPostInboundChain = "KUBEVIRT_POSTINBOUND"
 )
+
+type VNCConfig struct {
+    DisplayPort   int
+    WebSocketPort int
+    Enabled       bool
+}
 
 type option func(*MasqPod)
 
@@ -87,6 +94,24 @@ func WithLegacyMigrationPorts() option {
 	return func(m *MasqPod) {
 		m.migrationPorts = []int{LibvirtDirectMigrationPort, LibvirtBlockMigrationPort}
 	}
+}
+
+// WithVNCConfig configures VNC port handling for DirectVNCAccess
+func WithVNCConfig(vmi *v1.VirtualMachineInstance) option {
+    return func(m *MasqPod) {
+        if vmi.Spec.DirectVNCAccess != nil {
+            vncPort := 5900
+            if vmi.Spec.DirectVNCAccess.Port > 0 {
+                vncPort = int(vmi.Spec.DirectVNCAccess.Port)
+            }
+            
+            m.vncConfig = &VNCConfig{
+                DisplayPort:   vncPort,
+                WebSocketPort: vncPort + 1000,
+                Enabled:       true,
+            }
+        }
+    }
 }
 
 func (m MasqPod) Setup(bridgeIfaceSpec, podIfaceSpec *nmstate.Interface, vmiIface v1.Interface) error {
@@ -143,6 +168,12 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 			return err
 		}
 	}
+
+	if m.vncConfig != nil && m.vncConfig.Enabled {
+        if err := m.setupVNCHandling(family, podIfaceSpec); err != nil {
+            return fmt.Errorf("failed to setup VNC handling: %v", err)
+        }
+    }
 
 	addressesToDnat := []string{ipLoopback(family)}
 	if m.istioEnabled && family == nft.IPv4 {
@@ -273,4 +304,56 @@ func guestIPGateway(family nft.IPFamily, bridgeIface nmstate.Interface) net.IP {
 		ipAddr = net.ParseIP(bridgeIface.IPv6.Address[0].IP)
 	}
 	return ipAddr
+}
+
+// setupVNCHandling configures nftables rules to direct VNC traffic to the pod instead of the VM
+func (m MasqPod) setupVNCHandling(family nft.IPFamily, podIfaceSpec *nmstate.Interface) error {
+    if m.vncConfig == nil || !m.vncConfig.Enabled {
+        return nil
+    }
+
+    var podIP string
+    switch family {
+    case nft.IPv4:
+        if len(podIfaceSpec.IPv4.Address) > 0 {
+            podIP = podIfaceSpec.IPv4.Address[0].IP
+        }
+    case nft.IPv6:
+        if len(podIfaceSpec.IPv6.Address) > 0 {
+            podIP = podIfaceSpec.IPv6.Address[0].IP
+        }
+    }
+    
+    if podIP == "" {
+        return fmt.Errorf("pod IP not available for family %s", family)
+    }
+
+    vncPorts := []int{m.vncConfig.DisplayPort, m.vncConfig.WebSocketPort}
+    
+    for _, port := range vncPorts {
+        portStr := strconv.Itoa(port)
+        
+        // Regola per dirigere il traffico in ingresso direttamente al pod (non alla VM)
+        // Questa regola ha priorità alta e "cattura" il traffico VNC prima che venga inoltrato alla VM
+        if err := m.nftable.AddRule(family, natTable, kubevirtPreInboundChain, 
+            "tcp", "dport", portStr, "counter", "dnat", "to", podIP); err != nil {
+            return fmt.Errorf("failed to add VNC DNAT rule for port %d: %v", port, err)
+        }
+        
+        // Regola per il traffico locale (dal pod stesso)
+        loopback := ipLoopback(family)
+        if err := m.nftable.AddRule(family, natTable, outputChain, 
+            string(family), "daddr", loopback, "tcp", "dport", portStr, 
+            "counter", "dnat", "to", podIP); err != nil {
+            return fmt.Errorf("failed to add VNC output DNAT rule for port %d: %v", port, err)
+        }
+        
+        // Regola per evitare che queste porte vengano processate dalle regole generali di forwarding
+        if err := m.nftable.AddRule(family, natTable, kubevirtPreInboundChain,
+            "tcp", "dport", portStr, "counter", "return"); err != nil {
+            return fmt.Errorf("failed to add VNC skip rule for port %d: %v", port, err)
+        }
+    }
+    
+    return nil
 }
