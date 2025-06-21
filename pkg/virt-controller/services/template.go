@@ -1463,29 +1463,6 @@ func (t *templateService) generatePodAnnotations(vmi *v1.VirtualMachineInstance)
 	annotationsSet[v1.MigrationTransportUnixAnnotation] = "true"
 	annotationsSet[descheduler.EvictOnlyAnnotation] = ""
 
-	// AGGIUNGI QUESTA SEZIONE PER DirectVNCAccess
-    if vmi.Spec.DirectVNCAccess != nil {
-        vncPort := 5900
-        websocketPort := 6900
-        
-        if vmi.Spec.DirectVNCAccess.Port > 0 {
-            vncPort = int(vmi.Spec.DirectVNCAccess.Port)
-            websocketPort = vncPort + 1000
-        }
-        
-        enableVirtioGPU := true
-        if vmi.Spec.DirectVNCAccess.EnableVirtioGPU != nil {
-            enableVirtioGPU = *vmi.Spec.DirectVNCAccess.EnableVirtioGPU
-        }
-        
-        annotationsSet["kubevirt.io/vnc-enabled"] = "true"
-        annotationsSet["kubevirt.io/vnc-mode"] = "direct"
-        annotationsSet["kubevirt.io/vnc-display-port"] = strconv.Itoa(vncPort)
-        annotationsSet["kubevirt.io/vnc-websocket-port"] = strconv.Itoa(websocketPort)
-        annotationsSet["kubevirt.io/vnc-virtio-gpu"] = strconv.FormatBool(enableVirtioGPU)
-        annotationsSet["kubevirt.io/vnc-password-protected"] = strconv.FormatBool(vmi.Spec.DirectVNCAccess.Password != "")
-    }
-
 	for _, generator := range t.annotationsGenerators {
 		annotations, err := generator.Generate(vmi)
 		if err != nil {
