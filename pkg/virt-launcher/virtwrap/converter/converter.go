@@ -1866,26 +1866,6 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 				api.Arg{Value: "-vnc"},
 				api.Arg{Value: vncOption})
 
-			// Controlla se virtio-gpu è abilitato (default: true)
-			enableVirtioGPU := true
-			if vmi.Spec.DirectVNCAccess.EnableVirtioGPU != nil {
-				enableVirtioGPU = *vmi.Spec.DirectVNCAccess.EnableVirtioGPU
-			}
-
-			// Aggiungi virtio-gpu come SECONDO dispositivo video
-			if enableVirtioGPU {
-				// Usa un ID diverso per evitare conflitti con il VGA standard (video0)
-				virtioGpuArg := "virtio-gpu-pci,id=virtio-video1,max_outputs=1"
-				log.Log.Infof("DirectVNC: Adding virtio-gpu as secondary video device: %s", virtioGpuArg)
-				
-				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
-					api.Arg{Value: "-device"},
-					api.Arg{Value: virtioGpuArg})
-			}
-
-			// MANTIENI i dispositivi grafici standard (non rimuovere)
-			// Il VGA standard rimane come video0, virtio-gpu diventa video1
-
 			// Configura password SOLO se fornita
 			if vmi.Spec.DirectVNCAccess.Password != "" {
 				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
