@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vmi-vnc-test-vnc-6901
+  namespace: default
+  labels:
+    app.kubernetes.io/component: vnc-access
+    kubevirt.io/vmi: vmi-vnc-test
+  annotations:
+    kubevirt.io/vnc-port: "6901"
+spec:
+  type: NodePort
+  selector:
+    kubevirt.io/created-by: 9175d215-2cb3-4b68-b543-d781c80339c4
+  ports:
+    - name: vnc
+      port: 6901
+      targetPort: 6901
+      nodePort: 30000
+      protocol: TCP
+  externalTrafficPolicy: Local
+  internalTrafficPolicy: Cluster
