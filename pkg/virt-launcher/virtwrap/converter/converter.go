@@ -1892,55 +1892,54 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 			}
 			domain.Spec.Devices.Video = []api.Video{video}
 		}
-
+	
 		if vmi.Spec.DirectVNCAccess != nil {
-			// DirectVNCAccess: use direct QEMU arguments for both VNC and WebSocket
+			// DirectVNCAccess: add QEMU arguments in addition to standard VNC
 			initializeQEMUCmdAndQEMUArg(domain)
-
+	
 			vncPort := 5900
 			websocketPort := 6900
-
+	
 			if vmi.Spec.DirectVNCAccess.Port > 0 {
 				vncPort = int(vmi.Spec.DirectVNCAccess.Port)
 				websocketPort = vncPort + 1000
 			}
-
-			// Configure VNC with WebSocket through QEMU arguments
-			vncOption := fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort-5900, websocketPort)
-
-			// Add password ONLY if provided
+	
+			// Configure additional VNC endpoint with WebSocket
+			var vncOption string
+			var secretArgs []api.Arg
+	
 			if vmi.Spec.DirectVNCAccess.Password != "" {
-				vncOption += ",password=on"
+				// Configure VNC with password
+				vncOption = fmt.Sprintf("0.0.0.0:%d,websocket=%d,password-secret=vnc-secret0", vncPort-5900, websocketPort)
+				
+				// Add secret object
+				secretArgs = append(secretArgs,
+					api.Arg{Value: "-object"},
+					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s,format=raw", vmi.Spec.DirectVNCAccess.Password)})
+			} else {
+				// No password
+				vncOption = fmt.Sprintf("0.0.0.0:%d,websocket=%d", vncPort-5900, websocketPort)
 			}
-
+	
+			// Add secret args first
+			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg, secretArgs...)
+			
+			// Add additional VNC configuration
 			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
 				api.Arg{Value: "-vnc"},
 				api.Arg{Value: vncOption})
-
-			// Configure password ONLY if provided
-			if vmi.Spec.DirectVNCAccess.Password != "" {
-				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
-					api.Arg{Value: "-object"},
-					api.Arg{Value: fmt.Sprintf("secret,id=vnc-secret0,data=%s", vmi.Spec.DirectVNCAccess.Password)})
-			}
-
-			// Also add standard VNC via QEMU cmd for compatibility
-			standardVNCSocket := fmt.Sprintf("unix:%s/virt-vnc", fmt.Sprintf("/var/run/kubevirt-private/%s", vmi.ObjectMeta.UID))
-			domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
-				api.Arg{Value: "-vnc"},
-				api.Arg{Value: standardVNCSocket})
-
-		} else {
-			// Original standard VNC configuration (when DirectVNCAccess is not enabled)
-			domain.Spec.Devices.Graphics = []api.Graphics{
-				{
-					Listen: &api.GraphicsListen{
-						Type:   "socket",
-						Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
-					},
-					Type: "vnc",
+		}
+	
+		// Standard VNC configuration (always present for compatibility)
+		domain.Spec.Devices.Graphics = []api.Graphics{
+			{
+				Listen: &api.GraphicsListen{
+					Type:   "socket",
+					Socket: fmt.Sprintf("/var/run/kubevirt-private/%s/virt-vnc", vmi.ObjectMeta.UID),
 				},
-			}
+				Type: "vnc",
+			},
 		}
 	}
 
