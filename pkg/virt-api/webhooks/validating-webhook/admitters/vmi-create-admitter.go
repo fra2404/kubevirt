@@ -1468,6 +1468,7 @@ func smmFeatureEnabled(features *v1.Features) bool {
 func validateDomainSpec(field *k8sfield.Path, spec *v1.DomainSpec) []metav1.StatusCause {
 	var causes []metav1.StatusCause
 
+	causes = append(causes, validateQEMUVNC(field.Child("devices").Child("qemuVNCServer"), &spec.Devices)...)
 	causes = append(causes, storageadmitters.ValidateDisks(field.Child("devices").Child("disks"), spec.Devices.Disks)...)
 	causes = append(causes, validateFirmware(field.Child("firmware"), spec.Firmware)...)
 
@@ -1479,6 +1480,23 @@ func validateDomainSpec(field *k8sfield.Path, spec *v1.DomainSpec) []metav1.Stat
 		})
 	}
 
+	return causes
+}
+
+func validateQEMUVNC(field *k8sfield.Path, devices *v1.Devices) (causes []metav1.StatusCause) {
+	if devices.QEMUVNCServer == nil {
+		return causes
+	}
+	if !devices.QEMUVNCServer.EnableTCP && !devices.QEMUVNCServer.EnableWS {
+		return causes
+	}
+	if devices.AutoattachGraphicsDevice != nil && !*devices.AutoattachGraphicsDevice {
+		causes = append(causes, metav1.StatusCause{
+			Type:    metav1.CauseTypeFieldValueInvalid,
+			Message: "Integrated QEMU VNC server is disabled when autoattachGraphicsDevice is set to false",
+			Field:   field.String(),
+		})
+	}
 	return causes
 }
 

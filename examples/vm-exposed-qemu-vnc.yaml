@@ -1,0 +1,54 @@
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  labels:
+    kubevirt.io/vm: vm-exposed-qemu-vnc
+  name: vm-exposed-qemu-vnc
+spec:
+  runStrategy: Halted
+  template:
+    metadata:
+      labels:
+        kubevirt.io/vm: vm-exposed-qemu-vnc
+    spec:
+      domain:
+        devices:
+          qemuVNCServer:
+            enableTCP: true
+            enableWS: true
+          disks:
+          - disk:
+              bus: virtio
+            name: containerdisk
+          - disk:
+              bus: virtio
+            name: cloudinitdisk
+          interfaces:
+          - masquerade: {}
+            name: testmasquerade
+            excludedPorts:
+            - name: vnc-websocket
+              port: 5901
+              protocol: TCP
+            - name: vnc
+              port: 5900
+              protocol: TCP
+          rng: {}
+        memory:
+          guest: 128Mi
+        resources: {}
+      networks:
+      - name: testmasquerade
+        pod: {}
+      terminationGracePeriodSeconds: 0
+      volumes:
+      - containerDisk:
+          image: registry:5000/kubevirt/cirros-container-disk-demo:devel
+        name: containerdisk
+      - cloudInitNoCloud:
+          userData: |
+            #!/bin/sh
+
+            echo 'printed from cloud-init userdata'
+        name: cloudinitdisk

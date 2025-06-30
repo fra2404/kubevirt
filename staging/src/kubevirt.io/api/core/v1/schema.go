@@ -550,6 +550,11 @@ type Devices struct {
 	// Whether to attach the default graphics device or not.
 	// VNC will not be available if set to false. Defaults to true.
 	AutoattachGraphicsDevice *bool `json:"autoattachGraphicsDevice,omitempty"`
+	// Options to expose the VNC server integrated in QEMU.
+	// Requires a graphics device to be present.
+	// +optional
+	// +structType=granular
+	QEMUVNCServer *QEMUVNCServer `json:"qemuVNCServer,omitempty"`
 	// Whether to attach the default virtio-serial console or not.
 	// Serial console access will not be available if set to false. Defaults to true.
 	AutoattachSerialConsole *bool `json:"autoattachSerialConsole,omitempty"`
@@ -611,6 +616,19 @@ type Devices struct {
 	// Video describes the video device configuration for the vmi.
 	// +optional
 	Video *VideoDevice `json:"video,omitempty"`
+}
+
+type QEMUVNCServer struct {
+	// Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+	// Make sure you can reach the virt-launcher pod on TCP Port 5900.
+	// Defaults to false.
+	// +optional
+	EnableTCP bool `json:"enableTCP,omitempty"`
+	// Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+	// Make sure you can reach the virt-launcher pod on TCP Port 5901.
+	// Defaults to false.
+	// +optional
+	EnableWS bool `json:"enableWS,omitempty"`
 }
 
 // Represent a subset of client devices that can be accessed by VMI. At the
