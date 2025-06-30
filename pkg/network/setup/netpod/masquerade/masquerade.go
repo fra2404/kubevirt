@@ -139,7 +139,7 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 	}
 
 	if len(m.migrationPorts) > 0 {
-		if err := m.skipForwardPorts(family, m.migrationPorts...); err != nil {
+		if err := m.skipForwardPorts(family, "tcp", m.migrationPorts...); err != nil {
 			return err
 		}
 	}
@@ -150,41 +150,48 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 	}
 	addressesToDnatSpec := fmt.Sprintf("{ %s }", strings.Join(addressesToDnat, ", "))
 
-	for _, port := range vmiIface.Ports {
-		if port.Protocol == "" {
-			port.Protocol = "tcp"
-		}
-		protocol := strings.ToLower(port.Protocol)
-		addressesToSnat := []string{ipLoopback(family)}
+	if len(vmiIface.Ports) != 0 && len(vmiIface.ExcludedPorts) != 0 {
+		return fmt.Errorf("cannot have both ports to forward and to exclude from forwarding")
+	}
 
-		if m.istioEnabled {
-			var portsToForward []int
-			for _, nonProxiedPort := range istio.NonProxiedPorts() {
-				if int(port.Port) == nonProxiedPort {
-					portsToForward = append(portsToForward, nonProxiedPort)
+	// redirect only specified traffic
+	if len(vmiIface.Ports) != 0 {
+		for _, port := range vmiIface.Ports {
+			if port.Protocol == "" {
+				port.Protocol = "tcp"
+			}
+			protocol := strings.ToLower(port.Protocol)
+			addressesToSnat := []string{ipLoopback(family)}
+
+			if m.istioEnabled {
+				var portsToForward []int
+				for _, nonProxiedPort := range istio.NonProxiedPorts() {
+					if int(port.Port) == nonProxiedPort {
+						portsToForward = append(portsToForward, nonProxiedPort)
+					}
+				}
+				if err := m.forwardPorts(family, guestIP, "tcp", portsToForward...); err != nil {
+					return err
+				}
+
+				if family == nft.IPv4 {
+					addressesToSnat = append(addressesToSnat, istio.GetLoopbackAddress())
+				}
+			} else {
+				if err := m.forwardPorts(family, guestIP, protocol, int(port.Port)); err != nil {
+					return err
 				}
 			}
-			if err := m.forwardPorts(family, guestIP, "tcp", portsToForward...); err != nil {
+
+			addressesToSnatSpec := fmt.Sprintf("{ %s }", strings.Join(addressesToSnat, ", "))
+			gw := guestIPGateway(family, *bridgeIfaceSpec).String()
+			if err := m.nftable.AddRule(family, natTable, kubevirtPostInboundChain, protocol, "dport", strconv.Itoa(int(port.Port)), string(family), "saddr", addressesToSnatSpec, "counter", "snat", "to", gw); err != nil {
 				return err
 			}
 
-			if family == nft.IPv4 {
-				addressesToSnat = append(addressesToSnat, istio.GetLoopbackAddress())
-			}
-		} else {
-			if err := m.forwardPorts(family, guestIP, protocol, int(port.Port)); err != nil {
+			if err := m.nftable.AddRule(family, natTable, outputChain, string(family), "daddr", addressesToDnatSpec, protocol, "dport", strconv.Itoa(int(port.Port)), "counter", "dnat", "to", guestIP); err != nil {
 				return err
 			}
-		}
-
-		addressesToSnatSpec := fmt.Sprintf("{ %s }", strings.Join(addressesToSnat, ", "))
-		gw := guestIPGateway(family, *bridgeIfaceSpec).String()
-		if err := m.nftable.AddRule(family, natTable, kubevirtPostInboundChain, protocol, "dport", strconv.Itoa(int(port.Port)), string(family), "saddr", addressesToSnatSpec, "counter", "snat", "to", gw); err != nil {
-			return err
-		}
-
-		if err := m.nftable.AddRule(family, natTable, outputChain, string(family), "daddr", addressesToDnatSpec, protocol, "dport", strconv.Itoa(int(port.Port)), "counter", "dnat", "to", guestIP); err != nil {
-			return err
 		}
 	}
 
@@ -192,7 +199,7 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 		addressesToSnat := []string{ipLoopback(family)}
 		if m.istioEnabled {
 			// Skip forwarding for the reserved istio ports
-			if err := m.skipForwardPorts(family, istio.ReservedPorts()...); err != nil {
+			if err := m.skipForwardPorts(family, "tcp", istio.ReservedPorts()...); err != nil {
 				return err
 			}
 			if err := m.forwardPorts(family, guestIP, "tcp", istio.NonProxiedPorts()...); err != nil {
@@ -201,7 +208,36 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 			if family == nft.IPv4 {
 				addressesToSnat = append(addressesToSnat, istio.GetLoopbackAddress())
 			}
-		} else {
+		}
+
+		if !m.istioEnabled {
+			// allow traffic to reach virt-launcher pod
+			if len(vmiIface.ExcludedPorts) != 0 {
+				var tcpPorts []int
+				var udpPorts []int
+				for _, port := range vmiIface.ExcludedPorts {
+					protocol := port.Protocol
+					if protocol == "" {
+						protocol = "TCP"
+					}
+					switch strings.ToLower(protocol) {
+					case "tcp":
+						tcpPorts = append(tcpPorts, int(port.Port))
+					case "udp":
+						udpPorts = append(udpPorts, int(port.Port))
+					}
+				}
+				if len(udpPorts) != 0 {
+					if err := m.excludeForwardPorts(family, "udp", udpPorts...); err != nil {
+						return err
+					}
+				}
+				if len(tcpPorts) != 0 {
+					if err := m.excludeForwardPorts(family, "tcp", tcpPorts...); err != nil {
+						return err
+					}
+				}
+			}
 			if err := m.nftable.AddRule(family, natTable, kubevirtPreInboundChain, "counter", "dnat", "to", guestIP); err != nil {
 				return err
 			}
@@ -219,14 +255,23 @@ func (m MasqPod) setupNATByFamily(family nft.IPFamily, podIfaceSpec, bridgeIface
 	return nil
 }
 
-func (m MasqPod) skipForwardPorts(family nft.IPFamily, ports ...int) error {
+func (m MasqPod) excludeForwardPorts(family nft.IPFamily, protocol string, ports ...int) error {
+	fmtPorts := formatPorts(ports)
+	portsSpec := fmt.Sprintf("{ %s }", strings.Join(fmtPorts, ", "))
+	if err := m.nftable.AddRule(family, natTable, kubevirtPreInboundChain, protocol, "dport", portsSpec, "counter", "return"); err != nil {
+		return fmt.Errorf("failed to exclude ports from forwarding: %s/%s, err: %v", family, fmtPorts, err)
+	}
+	return nil
+}
+
+func (m MasqPod) skipForwardPorts(family nft.IPFamily, protocol string, ports ...int) error {
 	loopback := ipLoopback(family)
 	fmtPorts := formatPorts(ports)
 	portsSpec := fmt.Sprintf("{ %s }", strings.Join(fmtPorts, ", "))
-	if err := m.nftable.AddRule(family, natTable, outputChain, "tcp", "dport", portsSpec, string(family), "saddr", loopback, "counter", "return"); err != nil {
+	if err := m.nftable.AddRule(family, natTable, outputChain, protocol, "dport", portsSpec, string(family), "saddr", loopback, "counter", "return"); err != nil {
 		return fmt.Errorf("failed to define skip forwarding for: %s/%s, err: %v", family, fmtPorts, err)
 	}
-	if err := m.nftable.AddRule(family, natTable, kubevirtPostInboundChain, "tcp", "dport", portsSpec, string(family), "saddr", loopback, "counter", "return"); err != nil {
+	if err := m.nftable.AddRule(family, natTable, kubevirtPostInboundChain, protocol, "dport", portsSpec, string(family), "saddr", loopback, "counter", "return"); err != nil {
 		return fmt.Errorf("failed to define skip forwarding for: %s/%s, err: %v", family, fmtPorts, err)
 	}
 	return nil

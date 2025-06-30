@@ -1331,6 +1331,9 @@ type Interface struct {
 	Binding *PluginBinding `json:"binding,omitempty"`
 	// List of ports to be forwarded to the virtual machine.
 	Ports []Port `json:"ports,omitempty"`
+	// List of ports NOT to be forwarded to the virtual machine to expose services running in the virt-launcher Pod.
+	// +listType=atomic
+	ExcludedPorts []Port `json:"excludedPorts,omitempty"`
 	// Interface MAC address. For example: de:ad:00:00:be:af or DE-AD-00-00-BE-AF.
 	MacAddress string `json:"macAddress,omitempty"`
 	// BootOrder is an integer value > 0, used to determine ordering of boot devices.

@@ -21070,6 +21070,25 @@ func schema_kubevirtio_api_core_v1_Interface(ref common.ReferenceCallback) commo
 							},
 						},
 					},
+					"excludedPorts": {
+						VendorExtensible: spec.VendorExtensible{
+							Extensions: spec.Extensions{
+								"x-kubernetes-list-type": "atomic",
+							},
+						},
+						SchemaProps: spec.SchemaProps{
+							Description: "List of ports NOT to be forwarded to the virtual machine to expose services running in the virt-launcher Pod.",
+							Type:        []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Default: map[string]interface{}{},
+										Ref:     ref("kubevirt.io/api/core/v1.Port"),
+									},
+								},
+							},
+						},
+					},
 					"macAddress": {
 						SchemaProps: spec.SchemaProps{
 							Description: "Interface MAC address. For example: de:ad:00:00:be:af or DE-AD-00-00-BE-AF.",

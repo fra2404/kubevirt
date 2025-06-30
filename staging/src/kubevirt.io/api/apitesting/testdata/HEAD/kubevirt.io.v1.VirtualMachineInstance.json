@@ -279,6 +279,13 @@
                 "port": -4
               }
             ],
+            "excludedPorts": [
+              {
+                "name": "nameValue",
+                "protocol": "protocolValue",
+                "port": -4
+              }
+            ],
             "macAddress": "macAddressValue",
             "bootOrder": 18446744073709551607,
             "pciAddress": "pciAddressValue",

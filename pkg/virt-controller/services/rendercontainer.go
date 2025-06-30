@@ -245,6 +245,15 @@ func containerPortsFromVMI(vmi *v1.VirtualMachineInstance) []k8sv1.ContainerPort
 				ports = append(ports, k8sv1.ContainerPort{Protocol: k8sv1.Protocol(port.Protocol), Name: port.Name, ContainerPort: port.Port})
 			}
 		}
+		if iface.ExcludedPorts != nil {
+			for _, port := range iface.ExcludedPorts {
+				if port.Protocol == "" {
+					port.Protocol = "TCP"
+				}
+
+				ports = append(ports, k8sv1.ContainerPort{Protocol: k8sv1.Protocol(port.Protocol), Name: port.Name, ContainerPort: port.Port})
+			}
+		}
 	}
 
 	return ports

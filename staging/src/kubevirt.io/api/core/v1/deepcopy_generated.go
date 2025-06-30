@@ -2408,6 +2408,11 @@ func (in *Interface) DeepCopyInto(out *Interface) {
 		*out = make([]Port, len(*in))
 		copy(*out, *in)
 	}
+	if in.ExcludedPorts != nil {
+		in, out := &in.ExcludedPorts, &out.ExcludedPorts
+		*out = make([]Port, len(*in))
+		copy(*out, *in)
+	}
 	if in.BootOrder != nil {
 		in, out := &in.BootOrder, &out.BootOrder
 		*out = new(uint)

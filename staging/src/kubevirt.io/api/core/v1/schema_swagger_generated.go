@@ -700,17 +700,18 @@ func (Diag288Watchdog) SwaggerDoc() map[string]string {
 
 func (Interface) SwaggerDoc() map[string]string {
 	return map[string]string{
-		"name":        "Logical name of the interface as well as a reference to the associated networks.\nMust match the Name of a Network.",
-		"model":       "Interface model.\nOne of: e1000, e1000e, igb, ne2k_pci, pcnet, rtl8139, virtio.\nDefaults to virtio.",
-		"binding":     "Binding specifies the binding plugin that will be used to connect the interface to the guest.\nIt provides an alternative to InterfaceBindingMethod.\nversion: 1alphav1",
-		"ports":       "List of ports to be forwarded to the virtual machine.",
-		"macAddress":  "Interface MAC address. For example: de:ad:00:00:be:af or DE-AD-00-00-BE-AF.",
-		"bootOrder":   "BootOrder is an integer value > 0, used to determine ordering of boot devices.\nLower values take precedence.\nEach interface or disk that has a boot order must have a unique value.\nInterfaces without a boot order are not tried.\n+optional",
-		"pciAddress":  "If specified, the virtual network interface will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10\n+optional",
-		"dhcpOptions": "If specified the network interface will pass additional DHCP options to the VMI\n+optional",
-		"tag":         "If specified, the virtual network interface address and its tag will be provided to the guest via config drive\n+optional",
-		"acpiIndex":   "If specified, the ACPI index is used to provide network interface device naming, that is stable across changes\nin PCI addresses assigned to the device.\nThis value is required to be unique across all devices and be between 1 and (16*1024-1).\n+optional",
-		"state":       "State represents the requested operational state of the interface.\nThe supported values are:\n`absent`, expressing a request to remove the interface.\n`down`, expressing a request to set the link down.\n`up`, expressing a request to set the link up.\nEmpty value functions as `up`.\n+optional",
+		"name":          "Logical name of the interface as well as a reference to the associated networks.\nMust match the Name of a Network.",
+		"model":         "Interface model.\nOne of: e1000, e1000e, igb, ne2k_pci, pcnet, rtl8139, virtio.\nDefaults to virtio.",
+		"binding":       "Binding specifies the binding plugin that will be used to connect the interface to the guest.\nIt provides an alternative to InterfaceBindingMethod.\nversion: 1alphav1",
+		"ports":         "List of ports to be forwarded to the virtual machine.",
+		"excludedPorts": "List of ports NOT to be forwarded to the virtual machine to expose services running in the virt-launcher Pod.\n+listType=atomic",
+		"macAddress":    "Interface MAC address. For example: de:ad:00:00:be:af or DE-AD-00-00-BE-AF.",
+		"bootOrder":     "BootOrder is an integer value > 0, used to determine ordering of boot devices.\nLower values take precedence.\nEach interface or disk that has a boot order must have a unique value.\nInterfaces without a boot order are not tried.\n+optional",
+		"pciAddress":    "If specified, the virtual network interface will be placed on the guests pci address with the specified PCI address. For example: 0000:81:01.10\n+optional",
+		"dhcpOptions":   "If specified the network interface will pass additional DHCP options to the VMI\n+optional",
+		"tag":           "If specified, the virtual network interface address and its tag will be provided to the guest via config drive\n+optional",
+		"acpiIndex":     "If specified, the ACPI index is used to provide network interface device naming, that is stable across changes\nin PCI addresses assigned to the device.\nThis value is required to be unique across all devices and be between 1 and (16*1024-1).\n+optional",
+		"state":         "State represents the requested operational state of the interface.\nThe supported values are:\n`absent`, expressing a request to remove the interface.\n`down`, expressing a request to set the link down.\n`up`, expressing a request to set the link up.\nEmpty value functions as `up`.\n+optional",
 	}
 }
 

@@ -500,6 +500,10 @@ spec:
               - option: -6
                 value: valueValue
               tftpServerName: tftpServerNameValue
+            excludedPorts:
+            - name: nameValue
+              port: -4
+              protocol: protocolValue
             macAddress: macAddressValue
             macvtap: {}
             masquerade: {}

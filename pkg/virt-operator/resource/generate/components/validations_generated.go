@@ -6375,6 +6375,38 @@ var CRDsValidation map[string]string = map[string]string{
                                       to interface's DHCP server
                                     type: string
                                 type: object
+                              excludedPorts:
+                                description: List of ports NOT to be forwarded to
+                                  the virtual machine to expose services running in
+                                  the virt-launcher Pod.
+                                items:
+                                  description: |-
+                                    Port represents a port to expose from the virtual machine.
+                                    Default protocol TCP.
+                                    The port field is mandatory
+                                  properties:
+                                    name:
+                                      description: |-
+                                        If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                        named port in a pod must have a unique name. Name for the port that can be
+                                        referred to by services.
+                                      type: string
+                                    port:
+                                      description: |-
+                                        Number of port to expose for the virtual machine.
+                                        This must be a valid port number, 0 < x < 65536.
+                                      format: int32
+                                      type: integer
+                                    protocol:
+                                      description: |-
+                                        Protocol for port. Must be UDP or TCP.
+                                        Defaults to "TCP".
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
                               macAddress:
                                 description: 'Interface MAC address. For example:
                                   de:ad:00:00:be:af or DE-AD-00-00-BE-AF.'
@@ -11825,6 +11857,38 @@ var CRDsValidation map[string]string = map[string]string{
                               DHCP server
                             type: string
                         type: object
+                      excludedPorts:
+                        description: List of ports NOT to be forwarded to the virtual
+                          machine to expose services running in the virt-launcher
+                          Pod.
+                        items:
+                          description: |-
+                            Port represents a port to expose from the virtual machine.
+                            Default protocol TCP.
+                            The port field is mandatory
+                          properties:
+                            name:
+                              description: |-
+                                If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                named port in a pod must have a unique name. Name for the port that can be
+                                referred to by services.
+                              type: string
+                            port:
+                              description: |-
+                                Number of port to expose for the virtual machine.
+                                This must be a valid port number, 0 < x < 65536.
+                              format: int32
+                              type: integer
+                            protocol:
+                              description: |-
+                                Protocol for port. Must be UDP or TCP.
+                                Defaults to "TCP".
+                              type: string
+                          required:
+                          - port
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
                       macAddress:
                         description: 'Interface MAC address. For example: de:ad:00:00:be:af
                           or DE-AD-00-00-BE-AF.'
@@ -15524,6 +15588,38 @@ var CRDsValidation map[string]string = map[string]string{
                               DHCP server
                             type: string
                         type: object
+                      excludedPorts:
+                        description: List of ports NOT to be forwarded to the virtual
+                          machine to expose services running in the virt-launcher
+                          Pod.
+                        items:
+                          description: |-
+                            Port represents a port to expose from the virtual machine.
+                            Default protocol TCP.
+                            The port field is mandatory
+                          properties:
+                            name:
+                              description: |-
+                                If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                named port in a pod must have a unique name. Name for the port that can be
+                                referred to by services.
+                              type: string
+                            port:
+                              description: |-
+                                Number of port to expose for the virtual machine.
+                                This must be a valid port number, 0 < x < 65536.
+                              format: int32
+                              type: integer
+                            protocol:
+                              description: |-
+                                Protocol for port. Must be UDP or TCP.
+                                Defaults to "TCP".
+                              type: string
+                          required:
+                          - port
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
                       macAddress:
                         description: 'Interface MAC address. For example: de:ad:00:00:be:af
                           or DE-AD-00-00-BE-AF.'
@@ -18011,6 +18107,38 @@ var CRDsValidation map[string]string = map[string]string{
                                       to interface's DHCP server
                                     type: string
                                 type: object
+                              excludedPorts:
+                                description: List of ports NOT to be forwarded to
+                                  the virtual machine to expose services running in
+                                  the virt-launcher Pod.
+                                items:
+                                  description: |-
+                                    Port represents a port to expose from the virtual machine.
+                                    Default protocol TCP.
+                                    The port field is mandatory
+                                  properties:
+                                    name:
+                                      description: |-
+                                        If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                        named port in a pod must have a unique name. Name for the port that can be
+                                        referred to by services.
+                                      type: string
+                                    port:
+                                      description: |-
+                                        Number of port to expose for the virtual machine.
+                                        This must be a valid port number, 0 < x < 65536.
+                                      format: int32
+                                      type: integer
+                                    protocol:
+                                      description: |-
+                                        Protocol for port. Must be UDP or TCP.
+                                        Defaults to "TCP".
+                                      type: string
+                                  required:
+                                  - port
+                                  type: object
+                                type: array
+                                x-kubernetes-list-type: atomic
                               macAddress:
                                 description: 'Interface MAC address. For example:
                                   de:ad:00:00:be:af or DE-AD-00-00-BE-AF.'
@@ -22684,6 +22812,38 @@ var CRDsValidation map[string]string = map[string]string{
                                               66 to interface's DHCP server
                                             type: string
                                         type: object
+                                      excludedPorts:
+                                        description: List of ports NOT to be forwarded
+                                          to the virtual machine to expose services
+                                          running in the virt-launcher Pod.
+                                        items:
+                                          description: |-
+                                            Port represents a port to expose from the virtual machine.
+                                            Default protocol TCP.
+                                            The port field is mandatory
+                                          properties:
+                                            name:
+                                              description: |-
+                                                If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                                named port in a pod must have a unique name. Name for the port that can be
+                                                referred to by services.
+                                              type: string
+                                            port:
+                                              description: |-
+                                                Number of port to expose for the virtual machine.
+                                                This must be a valid port number, 0 < x < 65536.
+                                              format: int32
+                                              type: integer
+                                            protocol:
+                                              description: |-
+                                                Protocol for port. Must be UDP or TCP.
+                                                Defaults to "TCP".
+                                              type: string
+                                          required:
+                                          - port
+                                          type: object
+                                        type: array
+                                        x-kubernetes-list-type: atomic
                                       macAddress:
                                         description: 'Interface MAC address. For example:
                                           de:ad:00:00:be:af or DE-AD-00-00-BE-AF.'
@@ -28041,6 +28201,38 @@ var CRDsValidation map[string]string = map[string]string{
                                                   option 66 to interface's DHCP server
                                                 type: string
                                             type: object
+                                          excludedPorts:
+                                            description: List of ports NOT to be forwarded
+                                              to the virtual machine to expose services
+                                              running in the virt-launcher Pod.
+                                            items:
+                                              description: |-
+                                                Port represents a port to expose from the virtual machine.
+                                                Default protocol TCP.
+                                                The port field is mandatory
+                                              properties:
+                                                name:
+                                                  description: |-
+                                                    If specified, this must be an IANA_SVC_NAME and unique within the pod. Each
+                                                    named port in a pod must have a unique name. Name for the port that can be
+                                                    referred to by services.
+                                                  type: string
+                                                port:
+                                                  description: |-
+                                                    Number of port to expose for the virtual machine.
+                                                    This must be a valid port number, 0 < x < 65536.
+                                                  format: int32
+                                                  type: integer
+                                                protocol:
+                                                  description: |-
+                                                    Protocol for port. Must be UDP or TCP.
+                                                    Defaults to "TCP".
+                                                  type: string
+                                              required:
+                                              - port
+                                              type: object
+                                            type: array
+                                            x-kubernetes-list-type: atomic
                                           macAddress:
                                             description: 'Interface MAC address. For
                                               example: de:ad:00:00:be:af or DE-AD-00-00-BE-AF.'
