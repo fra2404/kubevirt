@@ -1908,6 +1908,23 @@ func Convert_v1_VirtualMachineInstance_To_api_Domain(vmi *v1.VirtualMachineInsta
 				Type: "vnc",
 			},
 		}
+		// we need to use QEMUArgs as libvirt doesn't support the VNC server listening on both TCP/Websocket and UNIX sockets
+		if vmi.Spec.Domain.Devices.QEMUVNCServer != nil {
+			var vncOptions []string
+			initializeQEMUCmdAndQEMUArg(domain)
+			if vmi.Spec.Domain.Devices.QEMUVNCServer.EnableTCP {
+				vncOptions = append(vncOptions, "0.0.0.0:0")
+			}
+			if vmi.Spec.Domain.Devices.QEMUVNCServer.EnableWS {
+				vncOptions = append(vncOptions, "websocket=5901")
+			}
+			if len(vncOptions) != 0 {
+				domain.Spec.QEMUCmd.QEMUArg = append(domain.Spec.QEMUCmd.QEMUArg,
+					api.Arg{Value: "-vnc"},
+					api.Arg{Value: strings.Join(vncOptions, ",")},
+				)
+			}
+		}
 	}
 
 	domainInterfaces, err := CreateDomainInterfaces(vmi, c)
