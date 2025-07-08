@@ -376,6 +376,10 @@
             ],
             "autoattachPodInterface": true,
             "autoattachGraphicsDevice": true,
+            "qemuVNCServer": {
+              "enableTCP": true,
+              "enableWS": true
+            },
             "autoattachSerialConsole": true,
             "logSerialConsole": true,
             "autoattachMemBalloon": true,

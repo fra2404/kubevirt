@@ -330,6 +330,9 @@ spec:
       networkInterfaceMultiqueue: true
       panicDevices:
       - model: modelValue
+      qemuVNCServer:
+        enableTCP: true
+        enableWS: true
       rng: {}
       sound:
         model: modelValue

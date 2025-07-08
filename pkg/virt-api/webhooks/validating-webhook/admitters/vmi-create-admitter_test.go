@@ -1456,6 +1456,33 @@ var _ = Describe("Validating VMICreate Admitter", func() {
 			})
 		})
 
+		Context("with QEMU integrated VNC server enabled", func() {
+			It("should accept when AutoattachGraphicsDevice is unset", func() {
+				vmi.Spec.Domain.Devices.AutoattachGraphicsDevice = nil
+				causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+				Expect(causes).To(BeEmpty())
+			})
+
+			It("should accept when autoattachGraphicsDevice is set to true", func() {
+				vmi.Spec.Domain.Devices.AutoattachGraphicsDevice = pointer.P(true)
+				causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+				Expect(causes).To(BeEmpty())
+			})
+
+			It("should reject when autoattachGraphicsDevice is set to false", func() {
+				vmi.Spec.Domain.Devices.AutoattachGraphicsDevice = pointer.P(false)
+				vmi.Spec.Domain.Devices.QEMUVNCServer = pointer.P(v1.QEMUVNCServer{
+					EnableTCP: true,
+					EnableWS:  true,
+				})
+				causes := ValidateVirtualMachineInstanceSpec(k8sfield.NewPath("fake"), &vmi.Spec, config)
+				Expect(causes).To(HaveLen(1))
+				Expect(causes[0].Type).To(Equal(metav1.CauseTypeFieldValueInvalid))
+				Expect(causes[0].Field).To(Equal("fake.domain.devices.qemuVNCServer"))
+				Expect(causes[0].Message).To(ContainSubstring("Integrated QEMU VNC server is disabled when autoattachGraphicsDevice is set to false"))
+			})
+		})
+
 		Context("with kernel boot defined", func() {
 
 			createKernelBoot := func(kernelArgs, initrdPath, kernelPath, image string) *v1.KernelBoot {

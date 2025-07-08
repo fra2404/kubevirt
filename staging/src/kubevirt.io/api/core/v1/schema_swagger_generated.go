@@ -255,6 +255,7 @@ func (Devices) SwaggerDoc() map[string]string {
 		"inputs":                     "Inputs describe input devices",
 		"autoattachPodInterface":     "Whether to attach a pod network interface. Defaults to true.",
 		"autoattachGraphicsDevice":   "Whether to attach the default graphics device or not.\nVNC will not be available if set to false. Defaults to true.",
+		"qemuVNCServer":              "Options to expose the VNC server integrated in QEMU.\nRequires a graphics device to be present.\n+optional\n+structType=granular",
 		"autoattachSerialConsole":    "Whether to attach the default virtio-serial console or not.\nSerial console access will not be available if set to false. Defaults to true.",
 		"logSerialConsole":           "Whether to log the auto-attached default serial console or not.\nSerial console logs will be collect to a file and then streamed from a named `guest-console-log`.\nNot relevant if autoattachSerialConsole is disabled.\nDefaults to cluster wide setting on VirtualMachineOptions.",
 		"autoattachMemBalloon":       "Whether to attach the Memory balloon device with default period.\nPeriod can be adjusted in virt-config.\nDefaults to true.\n+optional",
@@ -272,6 +273,13 @@ func (Devices) SwaggerDoc() map[string]string {
 		"sound":                      "Whether to emulate a sound device.\n+optional",
 		"tpm":                        "Whether to emulate a TPM device.\n+optional",
 		"video":                      "Video describes the video device configuration for the vmi.\n+optional",
+	}
+}
+
+func (QEMUVNCServer) SwaggerDoc() map[string]string {
+	return map[string]string{
+		"enableTCP": "Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.\nMake sure you can reach the virt-launcher pod on TCP Port 5900.\nDefaults to false.\n+optional",
+		"enableWS":  "Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.\nMake sure you can reach the virt-launcher pod on TCP Port 5901.\nDefaults to false.\n+optional",
 	}
 }
 

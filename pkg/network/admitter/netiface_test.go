@@ -318,16 +318,18 @@ var _ = Describe("Validating VMI network spec", func() {
 			spec := &v1.VirtualMachineInstanceSpec{}
 			spec.Domain.Devices.Interfaces = []v1.Interface{{
 				Name:                   "default",
-				InterfaceBindingMethod: v1.InterfaceBindingMethod{Masquerade: &v1.InterfaceMasquerade{}},
-				ExcludedPorts:          []v1.Port{{Name: "testport", Port: 80}, {Name: "testport", Protocol: "UDP", Port: 80}},
+				InterfaceBindingMethod: v1.InterfaceBindingMethod{Bridge: &v1.InterfaceBridge{}},
+				ExcludedPorts:          []v1.Port{{Port: 80}, {Protocol: "UDP", Port: 80}},
 			}}
 			spec.Networks = []v1.Network{{Name: "default", NetworkSource: v1.NetworkSource{Pod: &v1.PodNetwork{}}}}
 
-			validator := admitter.NewValidator(k8sfield.NewPath("fake"), spec, stubClusterConfigChecker{})
+			clusterConfig := stubClusterConfigChecker{bridgeBindingOnPodNetEnabled: true}
+
+			validator := admitter.NewValidator(k8sfield.NewPath("fake"), spec, clusterConfig)
 			Expect(validator.Validate()).To(ConsistOf(metav1.StatusCause{
 				Type:    "FieldValueInvalid",
-				Message: "Excluded ports from forwarding allowed only on masquerade interfaces (%s)",
-				Field:   "fake.domain.devices.interfaces[0].model",
+				Message: "Excluded ports from forwarding allowed only on masquerade interfaces (fake.domain.devices.interfaces[0].name)",
+				Field:   "fake.domain.devices.interfaces[0].name",
 			}))
 		})
 		DescribeTable("should reject interface port with", func(ports []v1.Port, expectedCauses []metav1.StatusCause) {

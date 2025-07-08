@@ -6528,6 +6528,25 @@ var CRDsValidation map[string]string = map[string]string{
                                 type: string
                             type: object
                           type: array
+                        qemuVNCServer:
+                          description: |-
+                            Options to expose the VNC server integrated in QEMU.
+                            Requires a graphics device to be present.
+                          properties:
+                            enableTCP:
+                              description: |-
+                                Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                                Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                                Defaults to false.
+                              type: boolean
+                            enableWS:
+                              description: |-
+                                Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                                Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                                Defaults to false.
+                              type: boolean
+                          type: object
+                          x-kubernetes-map-type: granular
                         rng:
                           description: Whether to have random number generator from
                             host
@@ -12009,6 +12028,25 @@ var CRDsValidation map[string]string = map[string]string{
                         type: string
                     type: object
                   type: array
+                qemuVNCServer:
+                  description: |-
+                    Options to expose the VNC server integrated in QEMU.
+                    Requires a graphics device to be present.
+                  properties:
+                    enableTCP:
+                      description: |-
+                        Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                        Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                        Defaults to false.
+                      type: boolean
+                    enableWS:
+                      description: |-
+                        Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                        Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                        Defaults to false.
+                      type: boolean
+                  type: object
+                  x-kubernetes-map-type: granular
                 rng:
                   description: Whether to have random number generator from host
                   type: object
@@ -15740,6 +15778,25 @@ var CRDsValidation map[string]string = map[string]string{
                         type: string
                     type: object
                   type: array
+                qemuVNCServer:
+                  description: |-
+                    Options to expose the VNC server integrated in QEMU.
+                    Requires a graphics device to be present.
+                  properties:
+                    enableTCP:
+                      description: |-
+                        Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                        Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                        Defaults to false.
+                      type: boolean
+                    enableWS:
+                      description: |-
+                        Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                        Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                        Defaults to false.
+                      type: boolean
+                  type: object
+                  x-kubernetes-map-type: granular
                 rng:
                   description: Whether to have random number generator from host
                   type: object
@@ -18260,6 +18317,25 @@ var CRDsValidation map[string]string = map[string]string{
                                 type: string
                             type: object
                           type: array
+                        qemuVNCServer:
+                          description: |-
+                            Options to expose the VNC server integrated in QEMU.
+                            Requires a graphics device to be present.
+                          properties:
+                            enableTCP:
+                              description: |-
+                                Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                                Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                                Defaults to false.
+                              type: boolean
+                            enableWS:
+                              description: |-
+                                Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                                Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                                Defaults to false.
+                              type: boolean
+                          type: object
+                          x-kubernetes-map-type: granular
                         rng:
                           description: Whether to have random number generator from
                             host
@@ -22969,6 +23045,25 @@ var CRDsValidation map[string]string = map[string]string{
                                         type: string
                                     type: object
                                   type: array
+                                qemuVNCServer:
+                                  description: |-
+                                    Options to expose the VNC server integrated in QEMU.
+                                    Requires a graphics device to be present.
+                                  properties:
+                                    enableTCP:
+                                      description: |-
+                                        Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                                        Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                                        Defaults to false.
+                                      type: boolean
+                                    enableWS:
+                                      description: |-
+                                        Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                                        Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                                        Defaults to false.
+                                      type: boolean
+                                  type: object
+                                  x-kubernetes-map-type: granular
                                 rng:
                                   description: Whether to have random number generator
                                     from host
@@ -28359,6 +28454,25 @@ var CRDsValidation map[string]string = map[string]string{
                                             type: string
                                         type: object
                                       type: array
+                                    qemuVNCServer:
+                                      description: |-
+                                        Options to expose the VNC server integrated in QEMU.
+                                        Requires a graphics device to be present.
+                                      properties:
+                                        enableTCP:
+                                          description: |-
+                                            Configure the QEMU VNC server to listen for VNC connections on the default TCP Port 5900.
+                                            Make sure you can reach the virt-launcher pod on TCP Port 5900.
+                                            Defaults to false.
+                                          type: boolean
+                                        enableWS:
+                                          description: |-
+                                            Configure the QEMU VNC server to listen for Websocket connections on TCP Port 5901.
+                                            Make sure you can reach the virt-launcher pod on TCP Port 5901.
+                                            Defaults to false.
+                                          type: boolean
+                                      type: object
+                                      x-kubernetes-map-type: granular
                                     rng:
                                       description: Whether to have random number generator
                                         from host
